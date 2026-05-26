@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4K Enterprise PDCA Management System</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <main id="loginView" class="auth-shell">
+    <section class="auth-panel" aria-labelledby="loginTitle">
+      <div class="auth-brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span>PDCA</span>
+          <small>4K</small>
+        </div>
+        <div>
+          <p class="eyebrow">4K Enterprise Corporation</p>
+          <p class="auth-location">Food Manufacturing Compliance</p>
+        </div>
+      </div>
+      <h1 id="loginTitle">PDCA Planning and Action Taken Management System</h1>
+      <p class="auth-copy">Secure planning records, responsible personnel, and action taken documentation in one controlled workspace.</p>
+
+      <form id="loginForm" class="auth-form">
+        <label>Email
+          <input id="loginEmail" name="email" type="email" autocomplete="email" required>
+        </label>
+
+        <label>Password
+          <span class="password-field">
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+            <button class="password-toggle hidden-password" type="button" data-toggle-password="loginPassword" aria-label="Show password"></button>
+          </span>
+        </label>
+
+        <button type="submit" class="primary-btn full-width">
+          <span>Login</span>
+        </button>
+        <p class="auth-switch">Don't have an account? <button id="showRegister" type="button">Sign up</button></p>
+      </form>
+
+      <form id="registerForm" class="auth-form is-hidden">
+        <label>Email
+          <input id="registerEmail" name="email" type="email" autocomplete="email" required>
+        </label>
+
+        <label>Password
+          <span class="password-field">
+            <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="6" required>
+            <button class="password-toggle hidden-password" type="button" data-toggle-password="registerPassword" aria-label="Show password"></button>
+          </span>
+        </label>
+
+        <button type="submit" class="primary-btn full-width">
+          <span>Create Account</span>
+        </button>
+        <p class="auth-switch">Have an account? <button id="showLogin" type="button">Login</button></p>
+      </form>
+    </section>
+  </main>
+
+  <div id="appShell" class="app-shell is-hidden">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="sidebar-brand">
+        <div class="brand-mark small" aria-hidden="true">4K</div>
+        <div>
+          <strong>PDCA Control</strong>
+          <span>Planning & Action Taken</span>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-link is-active" type="button" data-view="dashboardView">Dashboard</button>
+        <button class="nav-link" type="button" data-view="personnelView">Personnel</button>
+        <button class="nav-link" type="button" data-view="plansView">Plan Module</button>
+        <button class="nav-link" type="button" data-view="actionsView">Action Taken</button>
+      </nav>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <button id="menuToggle" class="icon-btn menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div>
+          <p class="eyebrow">4K Enterprise Corporation</p>
+          <h2 id="pageTitle">Dashboard</h2>
+        </div>
+        <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+      </header>
+
+      <div id="mobileNav" class="mobile-nav" aria-label="Mobile navigation">
+        <button class="nav-link is-active" type="button" data-view="dashboardView">Dashboard</button>
+        <button class="nav-link" type="button" data-view="personnelView">Personnel</button>
+        <button class="nav-link" type="button" data-view="plansView">Plan Module</button>
+        <button class="nav-link" type="button" data-view="actionsView">Action Taken</button>
+      </div>
+
+      <section id="loadingOverlay" class="loading-overlay is-hidden" aria-live="polite">
+        <div class="loader"></div>
+        <span>Loading records...</span>
+      </section>
+
+      <section id="dashboardView" class="view is-active" aria-labelledby="dashboardTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Overview</p>
+            <h3 id="dashboardTitle">Compliance Planning Dashboard</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="refreshBtn" class="secondary-btn" type="button">Refresh</button>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span>Total Plans</span>
+            <strong id="totalPlans">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Total Plan Items</span>
+            <strong id="totalPlanItems">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Total Action Taken</span>
+            <strong id="totalActions">0</strong>
+          </article>
+          <article class="summary-card alert">
+            <span>Recent Non-Compliances</span>
+            <strong id="recentNonCompliances">0</strong>
+          </article>
+        </div>
+
+        <article class="panel modules-panel">
+          <div class="panel-heading">
+            <h4>Monitoring Record Modules</h4>
+          </div>
+          <div id="monitoringModulesList" class="module-template-grid"></div>
+        </article>
+
+        <div class="stage-grid">
+          <article class="stage-card completed">
+            <header>Planning</header>
+            <div class="stage-body">
+              <div class="stage-icon check-icon" aria-hidden="true"></div>
+              <strong id="planningStatus">No Plans</strong>
+              <span id="planningSubtext">Create a plan to begin.</span>
+            </div>
+          </article>
+          <article class="stage-card progress">
+            <header>Plan Items</header>
+            <div class="stage-body">
+              <div class="ring" id="planItemRing" style="--progress: 0%">
+                <span id="planItemPercent">0%</span>
+              </div>
+              <strong id="planItemStatus">Not Started</strong>
+              <span id="planItemSubtext">No assigned standards yet.</span>
+            </div>
+          </article>
+          <article class="stage-card waiting">
+            <header>Action Taken</header>
+            <div class="stage-body">
+              <div class="stage-icon clock-icon" aria-hidden="true"></div>
+              <strong id="actionStatus">Waiting</strong>
+              <span id="actionSubtext">No non-compliance actions recorded.</span>
+            </div>
+          </article>
+          <article class="stage-card deadline">
+            <header>Nearest Due Date</header>
+            <div class="stage-body deadline-body">
+              <div class="stage-icon flag-icon" aria-hidden="true"></div>
+              <strong id="nearestDueDays">No Date</strong>
+              <span id="nearestDueText">No upcoming deadlines.</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="content-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <h4>Plan Progress</h4>
+            </div>
+            <div id="planProgressList" class="progress-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <h4>Overdue Plan Items</h4>
+            </div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Overdue</th>
+                    <th>Plan Item</th>
+                    <th>Deadline</th>
+                    <th>Responsible</th>
+                  </tr>
+                </thead>
+                <tbody id="overdueItemsTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div class="content-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <h4>Upcoming Deadlines</h4>
+            </div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Due In</th>
+                    <th>Plan Item</th>
+                    <th>Due Date</th>
+                    <th>Responsible</th>
+                  </tr>
+                </thead>
+                <tbody id="upcomingItemsTable"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <h4>Latest Action Taken</h4>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Not Compliant</th>
+                    <th>Corrective Action</th>
+                  </tr>
+                </thead>
+                <tbody id="latestActionsTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="personnelView" class="view" aria-labelledby="personnelTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Master Data</p>
+            <h3 id="personnelTitle">Personnel Management</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportPersonnelCsv()">Export CSV</button>
+            <button class="secondary-btn" type="button" onclick="printPersonnelReport()">Print</button>
+            <button id="addPersonnelBtn" class="primary-btn" type="button">Add Personnel</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Full Name</th>
+                  <th>Position</th>
+                  <th>Role</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="personnelTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="plansView" class="view" aria-labelledby="plansTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Plan Module</p>
+            <h3 id="plansTitle">Plans</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportPlansCsv()">Export CSV</button>
+            <button class="secondary-btn" type="button" onclick="printPlansReport()">Print</button>
+            <button id="addPlanBtn" class="primary-btn" type="button">Create Plan</button>
+          </div>
+        </div>
+
+        <div id="planPersonnelNotice" class="page-notice"></div>
+
+        <div class="plans-layout">
+          <article class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Plan Title</th>
+                    <th>Period</th>
+                    <th>Created By</th>
+                    <th>Approved By</th>
+                    <th class="actions-cell">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="plansTable"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="planDetailsPanel" class="panel details-panel">
+            <div class="empty-state">
+              <h4>Select a plan</h4>
+              <p>Plan item controls appear here after choosing a plan.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="actionsView" class="view" aria-labelledby="actionsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Action Taken Module</p>
+            <h3 id="actionsTitle">Action Taken Records</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportActionsCsv()">Export CSV</button>
+            <button class="secondary-btn" type="button" onclick="printActionsReport()">Print</button>
+            <button id="addActionBtn" class="primary-btn" type="button">Add Action Taken</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>NOT COMPLIANT</th>
+                  <th>CORRECTIVE ACTION</th>
+                  <th>REMARKS</th>
+                  <th>PREVENTIVE ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="actionsTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </div>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop is-hidden">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-header">
+        <h3 id="modalTitle">Form</h3>
+        <button id="closeModalBtn" class="icon-close" type="button" aria-label="Close modal">&times;</button>
+      </header>
+      <form id="modalForm" class="modal-form"></form>
+    </section>
+  </div>
+
+  <section id="printArea" class="print-area" aria-hidden="true"></section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=20260526-desktop-sidebar-toggle"></script>
+</body>
+</html>
