@@ -25,8 +25,8 @@
           <p class="auth-location">Food Manufacturing Compliance</p>
         </div>
       </div>
-      <h1 id="loginTitle">PDCA Planning and Action Taken Management System</h1>
-      <p class="auth-copy">Secure planning records, responsible personnel, and action taken documentation in one controlled workspace.</p>
+      <h1 id="loginTitle">PDCA Compliance Management System</h1>
+      <p class="auth-copy">Secure Plan, Do, Check, and Act records for food safety compliance in one controlled workspace.</p>
 
       <form id="loginForm" class="auth-form">
         <label>Email
@@ -47,6 +47,10 @@
       </form>
 
       <form id="registerForm" class="auth-form is-hidden">
+        <label>Full Name
+          <input id="registerFullName" name="full_name" type="text" autocomplete="name" required>
+        </label>
+
         <label>Email
           <input id="registerEmail" name="email" type="email" autocomplete="email" required>
         </label>
@@ -71,16 +75,24 @@
       <div class="sidebar-brand">
         <div class="brand-mark small" aria-hidden="true">4K</div>
         <div>
-          <strong>PDCA Control</strong>
-          <span>Planning & Action Taken</span>
+          <strong>4K PDCA</strong>
+          <span>Compliance Workspace</span>
         </div>
       </div>
 
       <nav class="nav-list">
-        <button class="nav-link is-active" type="button" data-view="dashboardView">Dashboard</button>
-        <button class="nav-link" type="button" data-view="personnelView">Personnel</button>
-        <button class="nav-link" type="button" data-view="plansView">Plan Module</button>
-        <button class="nav-link" type="button" data-view="actionsView">Action Taken</button>
+        <span class="nav-section-label">Workspace</span>
+        <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon">D</span><span>Dashboard</span></button>
+        <button class="nav-link" type="button" data-view="personnelView"><span class="nav-icon">P</span><span>People</span></button>
+        <span class="nav-section-label">PDCA Cycle</span>
+        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon">1</span><span>Planning</span></button>
+        <button class="nav-link" type="button" data-view="doView"><span class="nav-icon">2</span><span>Implementation</span></button>
+        <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon">3</span><span>Verification</span></button>
+        <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon">4</span><span>Corrective Action</span></button>
+        <span class="nav-section-label admin-only">Administration</span>
+        <button class="nav-link nav-link-admin admin-only" type="button" data-view="adminUsersView"><span class="nav-icon">A</span><span>Admin Console</span></button>
+        <span class="nav-section-label">Account</span>
+        <button id="changePasswordNavBtn" class="nav-link" type="button"><span class="nav-icon">K</span><span>Change Password</span></button>
       </nav>
     </aside>
 
@@ -95,14 +107,21 @@
           <p class="eyebrow">4K Enterprise Corporation</p>
           <h2 id="pageTitle">Dashboard</h2>
         </div>
-        <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+        <div class="topbar-actions">
+          <span id="roleBadge" class="role-badge">Viewer</span>
+          <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+        </div>
       </header>
 
       <div id="mobileNav" class="mobile-nav" aria-label="Mobile navigation">
-        <button class="nav-link is-active" type="button" data-view="dashboardView">Dashboard</button>
-        <button class="nav-link" type="button" data-view="personnelView">Personnel</button>
-        <button class="nav-link" type="button" data-view="plansView">Plan Module</button>
-        <button class="nav-link" type="button" data-view="actionsView">Action Taken</button>
+        <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon">D</span><span>Dashboard</span></button>
+        <button class="nav-link" type="button" data-view="personnelView"><span class="nav-icon">P</span><span>People</span></button>
+        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon">1</span><span>Planning</span></button>
+        <button class="nav-link" type="button" data-view="doView"><span class="nav-icon">2</span><span>Implementation</span></button>
+        <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon">3</span><span>Verification</span></button>
+        <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon">4</span><span>Corrective Action</span></button>
+        <button class="nav-link nav-link-admin admin-only" type="button" data-view="adminUsersView"><span class="nav-icon">A</span><span>Admin Console</span></button>
+        <button id="changePasswordMobileBtn" class="nav-link" type="button"><span class="nav-icon">K</span><span>Change Password</span></button>
       </div>
 
       <section id="loadingOverlay" class="loading-overlay is-hidden" aria-live="polite">
@@ -114,7 +133,7 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Overview</p>
-            <h3 id="dashboardTitle">Compliance Planning Dashboard</h3>
+            <h3 id="dashboardTitle">PDCA Compliance Dashboard</h3>
           </div>
           <div class="heading-actions">
             <button id="refreshBtn" class="secondary-btn" type="button">Refresh</button>
@@ -131,7 +150,15 @@
             <strong id="totalPlanItems">0</strong>
           </article>
           <article class="summary-card">
-            <span>Total Action Taken</span>
+            <span>Total Do Records</span>
+            <strong id="totalDoRecords">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Total Check Records</span>
+            <strong id="totalCheckRecords">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Total Act Records</span>
             <strong id="totalActions">0</strong>
           </article>
           <article class="summary-card alert">
@@ -157,21 +184,29 @@
             </div>
           </article>
           <article class="stage-card progress">
-            <header>Plan Items</header>
+            <header>Do</header>
             <div class="stage-body">
               <div class="ring" id="planItemRing" style="--progress: 0%">
                 <span id="planItemPercent">0%</span>
               </div>
               <strong id="planItemStatus">Not Started</strong>
-              <span id="planItemSubtext">No assigned standards yet.</span>
+              <span id="planItemSubtext">No implementation records yet.</span>
             </div>
           </article>
           <article class="stage-card waiting">
-            <header>Action Taken</header>
+            <header>Check</header>
             <div class="stage-body">
               <div class="stage-icon clock-icon" aria-hidden="true"></div>
+              <strong id="checkStatus">Waiting</strong>
+              <span id="checkSubtext">No verification records yet.</span>
+            </div>
+          </article>
+          <article class="stage-card deadline">
+            <header>Act</header>
+            <div class="stage-body deadline-body">
+              <div class="stage-icon flag-icon" aria-hidden="true"></div>
               <strong id="actionStatus">Waiting</strong>
-              <span id="actionSubtext">No non-compliance actions recorded.</span>
+              <span id="actionSubtext">No action records yet.</span>
             </div>
           </article>
           <article class="stage-card deadline">
@@ -232,7 +267,7 @@
           </article>
           <article class="panel">
             <div class="panel-heading">
-              <h4>Latest Action Taken</h4>
+              <h4>Latest Corrective Action</h4>
             </div>
             <div class="table-wrap">
               <table>
@@ -281,8 +316,8 @@
       <section id="plansView" class="view" aria-labelledby="plansTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Plan Module</p>
-            <h3 id="plansTitle">Plans</h3>
+            <p class="eyebrow">PDCA Cycle</p>
+            <h3 id="plansTitle">Planning</h3>
           </div>
           <div class="heading-actions">
             <button class="secondary-btn" type="button" onclick="exportPlansCsv()">Export CSV</button>
@@ -320,16 +355,81 @@
         </div>
       </section>
 
+      <section id="doView" class="view" aria-labelledby="doTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PDCA Cycle</p>
+            <h3 id="doTitle">Implementation Records</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportDoCsv()">Export CSV</button>
+            <button class="secondary-btn" type="button" onclick="printDoReport()">Print</button>
+            <button id="addDoBtn" class="primary-btn" type="button">Add Do Record</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Plan Item</th>
+                  <th>Performed By</th>
+                  <th>Date</th>
+                  <th>Activity Done</th>
+                  <th>Output Result</th>
+                  <th>Remarks</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="doTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="checkView" class="view" aria-labelledby="checkTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PDCA Cycle</p>
+            <h3 id="checkTitle">Verification Records</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportCheckCsv()">Export CSV</button>
+            <button class="secondary-btn" type="button" onclick="printCheckReport()">Print</button>
+            <button id="addCheckBtn" class="primary-btn" type="button">Add Check Record</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Plan Item</th>
+                  <th>Checked By</th>
+                  <th>Date</th>
+                  <th>Result</th>
+                  <th>Observation</th>
+                  <th>Evidence</th>
+                  <th>Remarks</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="checkTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
       <section id="actionsView" class="view" aria-labelledby="actionsTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Action Taken Module</p>
-            <h3 id="actionsTitle">Action Taken Records</h3>
+            <p class="eyebrow">PDCA Cycle</p>
+            <h3 id="actionsTitle">Corrective Action Records</h3>
           </div>
           <div class="heading-actions">
             <button class="secondary-btn" type="button" onclick="exportActionsCsv()">Export CSV</button>
             <button class="secondary-btn" type="button" onclick="printActionsReport()">Print</button>
-            <button id="addActionBtn" class="primary-btn" type="button">Add Action Taken</button>
+            <button id="addActionBtn" class="primary-btn" type="button">Add Corrective Action</button>
           </div>
         </div>
         <article class="panel">
@@ -344,6 +444,67 @@
                 </tr>
               </thead>
               <tbody id="actionsTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="adminUsersView" class="view admin-only" aria-labelledby="adminUsersTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Administration</p>
+            <h3 id="adminUsersTitle">Users & Roles</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="loadAllData()">Refresh</button>
+          </div>
+        </div>
+        <article class="panel">
+          <form id="adminCreateUserForm" class="admin-create-form">
+            <div>
+              <strong>Create User Account</strong>
+              <p>Register a new user and assign their PDCA role immediately.</p>
+            </div>
+            <label>
+              Email
+              <input name="email" type="email" placeholder="user@company.com" required>
+            </label>
+            <label>
+              Temporary Password
+              <input name="password" type="password" minlength="6" placeholder="Minimum 6 characters" required>
+            </label>
+            <label>
+              Full Name
+              <input name="full_name" type="text" placeholder="Employee name">
+            </label>
+            <label>
+              Role
+              <select name="role" required>
+                <option value="viewer">Viewer</option>
+                <option value="staff">Staff</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="president">President</option>
+                <option value="administrator">Administrator</option>
+              </select>
+            </label>
+            <button class="primary-btn" type="submit">Create Account</button>
+          </form>
+          <div class="permission-panel">
+            <strong>Role permissions</strong>
+            <p>Users without an assigned role remain view-only. Staff and supervisors can create and update PDCA records. Administrators can manage roles, personnel, and deletions.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Full Name</th>
+                  <th>Role</th>
+                  <th>Created</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTable"></tbody>
             </table>
           </div>
         </article>
@@ -364,6 +525,6 @@
   <section id="printArea" class="print-area" aria-hidden="true"></section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20260526-desktop-sidebar-toggle"></script>
+  <script src="app.js?v=20260527-password-sidebar"></script>
 </body>
 </html>

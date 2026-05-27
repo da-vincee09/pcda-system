@@ -8,7 +8,11 @@ const state = {
   personnel: [],
   plans: [],
   planItems: [],
+  doRecords: [],
+  checkRecords: [],
   actions: [],
+  userProfile: null,
+  userProfiles: [],
   selectedPlanId: null,
   modalMode: null,
   editingId: null
@@ -84,9 +88,13 @@ const elements = {
   appShell: $("#appShell"),
   loginForm: $("#loginForm"),
   registerForm: $("#registerForm"),
+  adminCreateUserForm: $("#adminCreateUserForm"),
   logoutBtn: $("#logoutBtn"),
+  changePasswordNavBtn: $("#changePasswordNavBtn"),
+  changePasswordMobileBtn: $("#changePasswordMobileBtn"),
   refreshBtn: $("#refreshBtn"),
   pageTitle: $("#pageTitle"),
+  roleBadge: $("#roleBadge"),
   menuToggle: $("#menuToggle"),
   mobileNav: $("#mobileNav"),
   loadingOverlay: $("#loadingOverlay"),
@@ -97,7 +105,10 @@ const elements = {
   closeModalBtn: $("#closeModalBtn"),
   personnelTable: $("#personnelTable"),
   plansTable: $("#plansTable"),
+  doTable: $("#doTable"),
+  checkTable: $("#checkTable"),
   actionsTable: $("#actionsTable"),
+  adminUsersTable: $("#adminUsersTable"),
   planDetailsPanel: $("#planDetailsPanel")
 };
 
@@ -126,6 +137,14 @@ function bindStaticEvents() {
     button.addEventListener("click", () => togglePassword(button));
   });
   elements.logoutBtn.addEventListener("click", handleLogout);
+  [elements.changePasswordNavBtn, elements.changePasswordMobileBtn].forEach((button) => {
+    if (button) {
+      button.addEventListener("click", () => {
+        elements.mobileNav.classList.remove("is-open");
+        openChangePasswordModal();
+      });
+    }
+  });
   elements.refreshBtn.addEventListener("click", loadAllData);
   elements.closeModalBtn.addEventListener("click", closeModal);
   elements.modalBackdrop.addEventListener("click", (event) => {
@@ -145,9 +164,14 @@ function bindStaticEvents() {
 
   $("#addPersonnelBtn").addEventListener("click", () => openPersonnelModal());
   $("#addPlanBtn").addEventListener("click", () => openPlanModal());
+  $("#addDoBtn").addEventListener("click", () => openDoModal());
+  $("#addCheckBtn").addEventListener("click", () => openCheckModal());
   $("#addActionBtn").addEventListener("click", () => openActionModal());
+  if (elements.adminCreateUserForm) {
+    elements.adminCreateUserForm.addEventListener("submit", handleAdminCreateUser);
+  }
 
-  $$(".nav-link").forEach((button) => {
+  $$("[data-view]").forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
   });
 }
@@ -190,7 +214,13 @@ async function handleRegister(event) {
 
   const { error } = await db.auth.signUp({
     email: formData.get("email"),
-    password: formData.get("password")
+    password: formData.get("password"),
+    options: {
+      data: {
+        full_name: String(formData.get("full_name") || "").trim(),
+        role: "viewer"
+      }
+    }
   });
 
   setLoading(false);
@@ -202,6 +232,67 @@ async function handleRegister(event) {
   showToast("Registration submitted. Check email confirmation if enabled.", "success");
   event.currentTarget.reset();
   switchAuth("login");
+}
+
+async function handleAdminCreateUser(event) {
+  event.preventDefault();
+  if (!isAdmin()) {
+    showToast("Only administrators can create user accounts.", "error");
+    return;
+  }
+
+  const formData = new FormData(event.currentTarget);
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+  const fullName = String(formData.get("full_name") || "").trim();
+  const role = String(formData.get("role") || "viewer");
+
+  const authClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: `pdca-account-create-${Date.now()}`
+    }
+  });
+
+  setLoading(true);
+  try {
+    const { data, error } = await authClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role
+        }
+      }
+    });
+
+    if (error) throw error;
+
+    if (data.user?.id) {
+      const profilePayload = {
+        id: data.user.id,
+        email,
+        full_name: fullName || null,
+        role
+      };
+      const { error: profileError } = await db
+        .from("user_profiles")
+        .upsert(profilePayload, { onConflict: "id" });
+
+      if (profileError) throw profileError;
+    }
+
+    showToast("User account created.", "success");
+    event.currentTarget.reset();
+    await loadAllData();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setLoading(false);
+  }
 }
 
 function switchAuth(mode) {
@@ -239,19 +330,32 @@ async function loadAllData() {
   try {
     // Keep table requests independent so one policy issue does not blank every dropdown.
     const results = await Promise.allSettled([
+      fetchTable("user_profiles", "created_at", true),
       fetchTable("personnel", "created_at", true),
       fetchTable("plans", "created_at", true),
       fetchTable("plan_items", "created_at", true),
+      fetchTable("do_records", "created_at", true),
+      fetchTable("check_records", "created_at", true),
       fetchTable("action_taken", "created_at", true)
     ]);
 
-    const [personnel, plans, planItems, actions] = results.map((result) => (
+    const [userProfiles, personnel, plans, planItems, doRecords, checkRecords, actions] = results.map((result) => (
       result.status === "fulfilled" ? result.value : []
     ));
 
+    state.userProfiles = userProfiles;
+    const authRole = state.session.user.user_metadata?.role || state.session.user.app_metadata?.role;
+    state.userProfile = userProfiles.find((profile) => profile.id === state.session.user.id) || {
+      id: state.session.user.id,
+      email: state.session.user.email,
+      full_name: "",
+      role: authRole || "viewer"
+    };
     state.personnel = personnel;
     state.plans = plans;
     state.planItems = planItems;
+    state.doRecords = doRecords;
+    state.checkRecords = checkRecords;
     state.actions = actions;
 
     const failedLoad = results.find((result) => result.status === "rejected");
@@ -280,21 +384,97 @@ async function fetchTable(table, orderColumn, descending = false) {
 }
 
 function renderAll() {
+  applyPermissions();
   renderDashboard();
   renderPersonnel();
   renderPlans();
   renderPlanDetails();
+  renderDoRecords();
+  renderCheckRecords();
   renderActions();
+  renderAdminUsers();
+}
+
+function currentRole() {
+  if (String(state.session?.user?.email || "").toLowerCase() === "admin@4kenterprise.com") {
+    return "administrator";
+  }
+
+  const role = state.userProfile?.role || state.session?.user?.user_metadata?.role || state.session?.user?.app_metadata?.role || "viewer";
+  return normalizeRole(role);
+}
+
+function normalizeRole(role) {
+  const normalized = String(role || "viewer").trim().toLowerCase().replaceAll(" ", "_");
+  if (["admin", "administrator", "system_admin", "system_administrator"].includes(normalized)) return "administrator";
+  if (["president", "company_president"].includes(normalized)) return "president";
+  if (["supervisor", "manager", "department_head"].includes(normalized)) return "supervisor";
+  if (["staff", "employee", "encoder", "user"].includes(normalized)) return "staff";
+  return "viewer";
+}
+
+function formattedRole(role = currentRole()) {
+  return String(role || "viewer")
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function isAdmin() {
+  return currentRole() === "administrator";
+}
+
+function canManageRecords() {
+  return ["administrator", "president", "supervisor", "staff"].includes(currentRole());
+}
+
+function canManagePersonnel() {
+  return isAdmin();
+}
+
+function canDeleteRecords() {
+  return isAdmin();
+}
+
+function applyPermissions() {
+  const role = currentRole();
+  if (elements.roleBadge) {
+    elements.roleBadge.textContent = formattedRole(role);
+    elements.roleBadge.dataset.role = role;
+  }
+
+  $$(".admin-only").forEach((item) => {
+    item.hidden = !isAdmin();
+  });
+
+  setControlAccess("#addPersonnelBtn", canManagePersonnel());
+  ["#addPlanBtn", "#addDoBtn", "#addCheckBtn", "#addActionBtn"].forEach((selector) => {
+    setControlAccess(selector, canManageRecords());
+  });
+
+  const activeAdminView = $("#adminUsersView")?.classList.contains("is-active");
+  if (activeAdminView && !isAdmin()) switchView("dashboardView");
+}
+
+function setControlAccess(selector, allowed) {
+  const control = $(selector);
+  if (!control) return;
+  control.hidden = !allowed;
+  control.disabled = !allowed;
 }
 
 function renderDashboard() {
   $("#totalPlans").textContent = state.plans.length;
   $("#totalPlanItems").textContent = state.planItems.length;
+  $("#totalDoRecords").textContent = state.doRecords.length;
+  $("#totalCheckRecords").textContent = state.checkRecords.length;
   $("#totalActions").textContent = state.actions.length;
 
   const today = startOfDay(new Date());
+  const planItemsWithDo = new Set(state.doRecords.map((record) => record.plan_item_id).filter(Boolean));
+  const planItemsWithChecks = new Set(state.checkRecords.map((record) => record.plan_item_id).filter(Boolean));
   const planItemsWithActions = new Set(state.actions.map((action) => action.plan_item_id).filter(Boolean));
-  const completedItems = state.planItems.filter((item) => planItemsWithActions.has(item.id)).length;
+  const completedItems = state.planItems.filter((item) => planItemsWithDo.has(item.id)).length;
   const itemProgress = state.planItems.length ? Math.round((completedItems / state.planItems.length) * 100) : 0;
   const overdueItems = state.planItems
     .filter((item) => item.due_date && startOfDay(item.due_date) < today && !planItemsWithActions.has(item.id))
@@ -318,11 +498,13 @@ function renderDashboard() {
   $("#planItemRing").style.setProperty("--progress", `${itemProgress}%`);
   $("#planItemPercent").textContent = `${itemProgress}%`;
   $("#planItemStatus").textContent = itemProgress === 100 ? "Completed" : itemProgress > 0 ? "In Progress" : "Not Started";
-  $("#planItemSubtext").textContent = `${completedItems} of ${state.planItems.length} item${state.planItems.length === 1 ? "" : "s"} have action records.`;
+  $("#planItemSubtext").textContent = `${completedItems} of ${state.planItems.length} item${state.planItems.length === 1 ? "" : "s"} have Do records.`;
+  $("#checkStatus").textContent = state.checkRecords.length ? "Verified" : "Waiting";
+  $("#checkSubtext").textContent = `${state.planItems.filter((item) => planItemsWithChecks.has(item.id)).length} of ${state.planItems.length} item${state.planItems.length === 1 ? "" : "s"} have Check records.`;
   $("#actionStatus").textContent = state.actions.length ? "Documented" : "Waiting";
   $("#actionSubtext").textContent = state.actions.length
-    ? `${state.actions.length} corrective/preventive record${state.actions.length === 1 ? "" : "s"} logged.`
-    : "No non-compliance actions recorded.";
+    ? `${state.actions.length} Act record${state.actions.length === 1 ? "" : "s"} logged.`
+    : "No action records yet.";
 
   const nearestItem = upcomingItems[0] || overdueItems[0];
   if (nearestItem) {
@@ -383,7 +565,7 @@ function renderDashboard() {
       </tr>
     `,
     2,
-    "No action taken records yet."
+    "No corrective action records yet."
   );
 
   renderMonitoringModules();
@@ -432,19 +614,22 @@ function renderPlanProgress(planItemsWithActions) {
 function renderPersonnel() {
   elements.personnelTable.innerHTML = renderRows(
     state.personnel,
-    (person) => `
-      <tr>
-        <td><strong>${escapeHtml(person.full_name)}</strong></td>
-        <td>${escapeHtml(person.position)}</td>
-        <td>${escapeHtml(person.role)}</td>
-        <td class="actions-cell">
-          <div class="table-actions">
+    (person) => {
+      const actions = canManagePersonnel()
+        ? `<div class="table-actions">
             <button type="button" onclick="openPersonnelModal('${person.id}')">Edit</button>
             <button class="delete-action" type="button" onclick="deleteRecord('personnel', '${person.id}')">Delete</button>
-          </div>
-        </td>
-      </tr>
-    `,
+          </div>`
+        : `<span class="muted-action">View only</span>`;
+      return `
+        <tr>
+          <td><strong>${escapeHtml(person.full_name)}</strong></td>
+          <td>${escapeHtml(person.position)}</td>
+          <td>${escapeHtml(person.role)}</td>
+          <td class="actions-cell">${actions}</td>
+        </tr>
+      `;
+    },
     4,
     "No personnel records found."
   );
@@ -455,21 +640,25 @@ function renderPlans() {
 
   elements.plansTable.innerHTML = renderRows(
     state.plans,
-    (plan) => `
-      <tr class="${plan.id === state.selectedPlanId ? "selected-row" : ""}">
-        <td><strong>${escapeHtml(plan.plan_title)}</strong></td>
-        <td>${formatPeriod(plan.period_month, plan.period_year)}</td>
-        <td>${personName(plan.created_by)}</td>
-        <td>${personName(plan.approved_by)}</td>
-        <td class="actions-cell">
-          <div class="table-actions">
-            <button type="button" onclick="selectPlan('${plan.id}')">View</button>
-            <button type="button" onclick="openPlanModal('${plan.id}')">Edit</button>
-            <button class="delete-action" type="button" onclick="deleteRecord('plans', '${plan.id}')">Delete</button>
-          </div>
-        </td>
-      </tr>
-    `,
+    (plan) => {
+      const editButton = canManageRecords() ? `<button type="button" onclick="openPlanModal('${plan.id}')">Edit</button>` : "";
+      const deleteButton = canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('plans', '${plan.id}')">Delete</button>` : "";
+      return `
+        <tr class="${plan.id === state.selectedPlanId ? "selected-row" : ""}">
+          <td><strong>${escapeHtml(plan.plan_title)}</strong></td>
+          <td>${formatPeriod(plan.period_month, plan.period_year)}</td>
+          <td>${personName(plan.created_by)}</td>
+          <td>${personName(plan.approved_by)}</td>
+          <td class="actions-cell">
+            <div class="table-actions">
+              <button type="button" onclick="selectPlan('${plan.id}')">View</button>
+              ${editButton}
+              ${deleteButton}
+            </div>
+          </td>
+        </tr>
+      `;
+    },
     5,
     "No plans created yet."
   );
@@ -492,7 +681,7 @@ function renderPlanPersonnelNotice() {
     <div class="form-note warning">
       <strong>No personnel options yet.</strong>
       Add personnel first so the Create Plan form can show Created By and Approved By choices.
-      <button class="ghost-btn" type="button" onclick="quickAddPersonnel()">Add Personnel</button>
+      ${canManagePersonnel() ? '<button class="ghost-btn" type="button" onclick="quickAddPersonnel()">Add Personnel</button>' : ''}
     </div>
   `;
 }
@@ -516,7 +705,7 @@ function renderPlanDetails() {
         <p class="eyebrow">Plan Details</p>
         <h4>${escapeHtml(plan.plan_title)}</h4>
       </div>
-      <button class="primary-btn" type="button" onclick="openPlanItemModal()">Add Item</button>
+      ${canManageRecords() ? '<button class="primary-btn" type="button" onclick="openPlanItemModal()">Add Item</button>' : '<span class="muted-action">View only</span>'}
     </div>
     <ul class="meta-list">
       <li><span>Period</span><strong>${formatPeriod(plan.period_month, plan.period_year)}</strong></li>
@@ -532,14 +721,17 @@ function renderPlanDetails() {
 }
 
 function renderPlanItemCard(item) {
+  const actions = canManageRecords()
+    ? `<div class="table-actions">
+        <button type="button" onclick="openPlanItemModal('${item.id}')">Edit</button>
+        ${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('plan_items', '${item.id}')">Delete</button>` : ""}
+      </div>`
+    : `<span class="muted-action">View only</span>`;
   return `
     <article class="item-card">
       <div class="detail-title">
         <strong>${escapeHtml(item.category)}</strong>
-        <div class="table-actions">
-          <button type="button" onclick="openPlanItemModal('${item.id}')">Edit</button>
-          <button class="delete-action" type="button" onclick="deleteRecord('plan_items', '${item.id}')">Delete</button>
-        </div>
+        ${actions}
       </div>
       <p><strong>Objective:</strong> ${escapeHtml(item.objective)}</p>
       <p><strong>Target Standard:</strong> ${escapeHtml(item.target_standard)}</p>
@@ -548,6 +740,57 @@ function renderPlanItemCard(item) {
       <p><strong>Due:</strong> ${formatDate(item.due_date)} | <strong>Remarks:</strong> ${escapeHtml(item.remarks)}</p>
     </article>
   `;
+}
+
+function renderDoRecords() {
+  elements.doTable.innerHTML = renderRows(
+    state.doRecords,
+    (record) => {
+      const editButton = canManageRecords() ? `<button type="button" onclick="openDoModal('${record.id}')">Edit</button>` : "";
+      const deleteButton = canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('do_records', '${record.id}')">Delete</button>` : "";
+      return `
+        <tr>
+          <td><strong>${escapeHtml(planItemName(record.plan_item_id))}</strong></td>
+          <td>${personName(record.performed_by)}</td>
+          <td>${formatDate(record.date_performed)}</td>
+          <td>${escapeHtml(record.activity_done)}</td>
+          <td>${escapeHtml(record.output_result)}</td>
+          <td>${escapeHtml(record.remarks)}</td>
+          <td class="actions-cell">
+            ${editButton || deleteButton ? `<div class="table-actions">${editButton}${deleteButton}</div>` : '<span class="muted-action">View only</span>'}
+          </td>
+        </tr>
+      `;
+    },
+    7,
+    "No Do records found."
+  );
+}
+
+function renderCheckRecords() {
+  elements.checkTable.innerHTML = renderRows(
+    state.checkRecords,
+    (record) => {
+      const editButton = canManageRecords() ? `<button type="button" onclick="openCheckModal('${record.id}')">Edit</button>` : "";
+      const deleteButton = canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('check_records', '${record.id}')">Delete</button>` : "";
+      return `
+        <tr>
+          <td><strong>${escapeHtml(planItemName(record.plan_item_id))}</strong></td>
+          <td>${personName(record.checked_by)}</td>
+          <td>${formatDate(record.date_checked)}</td>
+          <td><span class="status-pill ${record.check_result === "Not Compliant" ? "danger" : ""}">${escapeHtml(record.check_result)}</span></td>
+          <td>${escapeHtml(record.observation)}</td>
+          <td>${escapeHtml(record.evidence)}</td>
+          <td>${escapeHtml(record.remarks)}</td>
+          <td class="actions-cell">
+            ${editButton || deleteButton ? `<div class="table-actions">${editButton}${deleteButton}</div>` : '<span class="muted-action">View only</span>'}
+          </td>
+        </tr>
+      `;
+    },
+    8,
+    "No Check records found."
+  );
 }
 
 function renderActions() {
@@ -563,6 +806,38 @@ function renderActions() {
     `,
     4,
     "No action taken records found."
+  );
+}
+
+function renderAdminUsers() {
+  if (!elements.adminUsersTable) return;
+
+  elements.adminUsersTable.innerHTML = renderRows(
+    state.userProfiles,
+    (profile) => {
+      const isCurrentUser = profile.id === state.session.user.id;
+      const rowActions = isCurrentUser
+        ? `<span class="muted-action">Current account</span>`
+        : `<div class="table-actions">
+            <button type="button" onclick="openUserProfileModal('${profile.id}')">Edit</button>
+          </div>`;
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(profile.email || "No email")}</strong></td>
+          <td>${escapeHtml(profile.full_name || "Not set")}</td>
+          <td>
+            <select class="admin-role-select" onchange="updateUserRole('${profile.id}', this.value)" ${isCurrentUser ? "disabled" : ""}>
+              ${roleOptions(profile.role)}
+            </select>
+          </td>
+          <td>${formatDate(profile.created_at)}</td>
+          <td class="actions-cell">${rowActions}</td>
+        </tr>
+      `;
+    },
+    5,
+    "No user profiles found."
   );
 }
 
@@ -628,7 +903,11 @@ function exportActionsCsv() {
       Plan: plan?.plan_title || "",
       "Plan Item": item?.category || "",
       "Checked By": rawPersonName(action.checked_by),
+      "Action Owner": rawPersonName(action.action_owner),
       "Date Checked": action.date_checked,
+      "Target Completion": action.target_completion_date,
+      "Completion Date": action.completion_date,
+      Status: action.action_status,
       "NOT COMPLIANT": action.not_compliant_observation,
       "CORRECTIVE ACTION": action.corrective_action,
       REMARKS: action.remarks,
@@ -636,6 +915,31 @@ function exportActionsCsv() {
     };
   });
   downloadCsv("action-taken-records", rows);
+}
+
+function exportDoCsv() {
+  const rows = state.doRecords.map((record) => ({
+    "Plan Item": planItemName(record.plan_item_id),
+    "Performed By": rawPersonName(record.performed_by),
+    "Date Performed": record.date_performed,
+    "Activity Done": record.activity_done,
+    "Output Result": record.output_result,
+    Remarks: record.remarks
+  }));
+  downloadCsv("do-records", rows);
+}
+
+function exportCheckCsv() {
+  const rows = state.checkRecords.map((record) => ({
+    "Plan Item": planItemName(record.plan_item_id),
+    "Checked By": rawPersonName(record.checked_by),
+    "Date Checked": record.date_checked,
+    Result: record.check_result,
+    Observation: record.observation,
+    Evidence: record.evidence,
+    Remarks: record.remarks
+  }));
+  downloadCsv("check-records", rows);
 }
 
 function printPersonnelReport() {
@@ -713,7 +1017,7 @@ function printPlansReport() {
     `;
   }).join("");
 
-  printHtmlReport("Plan Module", groups, "plan-print");
+  printHtmlReport("PDCA Planning", groups, "plan-print");
 }
 
 function printActionsReport() {
@@ -724,7 +1028,11 @@ function printActionsReport() {
       plan?.plan_title || "",
       item?.category || "",
       rawPersonName(action.checked_by),
+      rawPersonName(action.action_owner),
       formatDate(action.date_checked),
+      formatDate(action.target_completion_date),
+      formatDate(action.completion_date),
+      action.action_status,
       action.not_compliant_observation,
       action.corrective_action,
       action.remarks,
@@ -732,10 +1040,35 @@ function printActionsReport() {
     ];
   });
   printReport(
-    "Action Taken Records",
-    ["Plan", "Plan Item", "Checked By", "Date Checked", "NOT COMPLIANT", "CORRECTIVE ACTION", "REMARKS", "PREVENTIVE ACTION"],
+    "Corrective Action Records",
+    ["Plan", "Plan Item", "Checked By", "Owner", "Date Checked", "Target", "Completed", "Status", "NOT COMPLIANT", "CORRECTIVE ACTION", "REMARKS", "PREVENTIVE ACTION"],
     rows
   );
+}
+
+function printDoReport() {
+  const rows = state.doRecords.map((record) => [
+    planItemName(record.plan_item_id),
+    rawPersonName(record.performed_by),
+    formatDate(record.date_performed),
+    record.activity_done,
+    record.output_result,
+    record.remarks
+  ]);
+  printReport("Do Records", ["Plan Item", "Performed By", "Date", "Activity Done", "Output Result", "Remarks"], rows);
+}
+
+function printCheckReport() {
+  const rows = state.checkRecords.map((record) => [
+    planItemName(record.plan_item_id),
+    rawPersonName(record.checked_by),
+    formatDate(record.date_checked),
+    record.check_result,
+    record.observation,
+    record.evidence,
+    record.remarks
+  ]);
+  printReport("Check Records", ["Plan Item", "Checked By", "Date", "Result", "Observation", "Evidence", "Remarks"], rows);
 }
 
 function downloadCsv(baseName, rows) {
@@ -796,20 +1129,33 @@ function printHtmlReport(title, bodyHtml, extraClass = "") {
 }
 
 function switchView(viewId) {
+  if (viewId === "adminUsersView" && !isAdmin()) {
+    showToast("Only administrators can open Users & Roles.", "error");
+    return;
+  }
+
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewId));
   $$(".nav-link").forEach((link) => link.classList.toggle("is-active", link.dataset.view === viewId));
   elements.mobileNav.classList.remove("is-open");
 
   const titleMap = {
     dashboardView: "Dashboard",
-    personnelView: "Personnel Management",
-    plansView: "Plan Module",
-    actionsView: "Action Taken Module"
+    personnelView: "People",
+    plansView: "Planning",
+    doView: "Implementation",
+    checkView: "Verification",
+    actionsView: "Corrective Action",
+    adminUsersView: "Users & Roles"
   };
   elements.pageTitle.textContent = titleMap[viewId] || "Dashboard";
 }
 
 function openPersonnelModal(id = null) {
+  if (!canManagePersonnel()) {
+    showToast("Only administrators can manage personnel.", "error");
+    return;
+  }
+
   const person = id ? state.personnel.find((item) => item.id === id) : {};
   openModal({
     title: id ? "Edit Personnel" : "Add Personnel",
@@ -824,6 +1170,11 @@ function openPersonnelModal(id = null) {
 }
 
 function openPlanModal(id = null) {
+  if (!canManageRecords()) {
+    showToast("Your account is view-only until an administrator assigns a role.", "error");
+    return;
+  }
+
   const plan = id ? state.plans.find((item) => item.id === id) : {};
   const people = personnelOptions();
   const today = toDateInputValue(new Date());
@@ -851,6 +1202,11 @@ function openPlanModal(id = null) {
 }
 
 function openPlanItemModal(id = null) {
+  if (!canManageRecords()) {
+    showToast("Your account is view-only until an administrator assigns a role.", "error");
+    return;
+  }
+
   if (!state.selectedPlanId) {
     showToast("Select a plan before adding items.", "error");
     return;
@@ -881,19 +1237,83 @@ function openPlanItemModal(id = null) {
   bindDateGuards();
 }
 
+function openDoModal(id = null) {
+  if (!canManageRecords()) {
+    showToast("Your account is view-only until an administrator assigns a role.", "error");
+    return;
+  }
+
+  const record = id ? state.doRecords.find((item) => item.id === id) : {};
+  openModal({
+    title: id ? "Edit Do Record" : "Add Do Record",
+    mode: "do_records",
+    editingId: id,
+    fields: [
+      planItemSelectField(record?.plan_item_id, "plan_item_id", "Plan Item"),
+      selectField("performed_by", "Performed By", personnelOptions(), record?.performed_by, true),
+      inputField("date_performed", "Date Performed", "date", record?.date_performed, true, { max: toDateInputValue(new Date()) }),
+      textareaField("activity_done", "Activity Done", record?.activity_done, true),
+      textareaField("output_result", "Output Result", record?.output_result, false),
+      textareaField("remarks", "Remarks", record?.remarks, false)
+    ]
+  });
+}
+
+function openCheckModal(id = null) {
+  if (!canManageRecords()) {
+    showToast("Your account is view-only until an administrator assigns a role.", "error");
+    return;
+  }
+
+  const record = id ? state.checkRecords.find((item) => item.id === id) : {};
+  openModal({
+    title: id ? "Edit Check Record" : "Add Check Record",
+    mode: "check_records",
+    editingId: id,
+    fields: [
+      planItemSelectField(record?.plan_item_id, "plan_item_id", "Plan Item"),
+      selectField("checked_by", "Checked By", personnelOptions(), record?.checked_by, true),
+      inputField("date_checked", "Date Checked", "date", record?.date_checked, true, { max: toDateInputValue(new Date()) }),
+      selectField("check_result", "Check Result", [
+        { value: "Compliant", label: "Compliant" },
+        { value: "Not Compliant", label: "Not Compliant" },
+        { value: "Needs Follow-up", label: "Needs Follow-up" }
+      ], record?.check_result, true),
+      textareaField("observation", "Observation", record?.observation, false),
+      textareaField("evidence", "Evidence", record?.evidence, false),
+      textareaField("remarks", "Remarks", record?.remarks, false)
+    ]
+  });
+}
+
 function openActionModal(id = null) {
+  if (!canManageRecords()) {
+    showToast("Your account is view-only until an administrator assigns a role.", "error");
+    return;
+  }
+
   const action = id ? state.actions.find((record) => record.id === id) : {};
   const selectedItem = state.planItems.find((item) => item.id === action?.plan_item_id);
   openModal({
-    title: id ? "Edit Action Taken" : "Add Action Taken",
+    title: id ? "Edit Corrective Action" : "Add Corrective Action",
     mode: "action_taken",
     editingId: id,
     fields: [
       actionPlanItemPromptField(),
       actionPlanFilterField(selectedItem?.plan_id || ""),
       planItemSelectField(action?.plan_item_id),
+      selectField("check_record_id", "Related Check Record", checkRecordOptions(), action?.check_record_id, false),
       selectField("checked_by", "Checked By", personnelOptions(), action?.checked_by, true),
+      selectField("action_owner", "Action Owner", personnelOptions(), action?.action_owner, false),
       inputField("date_checked", "Date Checked", "date", action?.date_checked, true, { max: toDateInputValue(new Date()) }),
+      inputField("target_completion_date", "Target Completion Date", "date", action?.target_completion_date, false),
+      inputField("completion_date", "Completion Date", "date", action?.completion_date, false, { max: toDateInputValue(new Date()) }),
+      selectField("action_status", "Action Status", [
+        { value: "Open", label: "Open" },
+        { value: "In Progress", label: "In Progress" },
+        { value: "Completed", label: "Completed" },
+        { value: "Verified", label: "Verified" }
+      ], action?.action_status || "Open", true),
       textareaField("not_compliant_observation", "Not Compliant Observation", action?.not_compliant_observation, true),
       textareaField("corrective_action", "Corrective Action", action?.corrective_action, true),
       textareaField("remarks", "Remarks", action?.remarks, false),
@@ -901,6 +1321,56 @@ function openActionModal(id = null) {
     ]
   });
   filterActionPlanItems(selectedItem?.plan_id || "");
+}
+
+function openUserProfileModal(id) {
+  if (!isAdmin()) {
+    showToast("Only administrators can edit user accounts.", "error");
+    return;
+  }
+
+  if (id === state.session.user.id) {
+    showToast("You cannot edit your own account here.", "error");
+    return;
+  }
+
+  const profile = state.userProfiles.find((item) => item.id === id);
+  if (!profile) {
+    showToast("User profile was not found.", "error");
+    return;
+  }
+
+  openModal({
+    title: "Edit User Account",
+    mode: "user_profiles",
+    editingId: id,
+    fields: [
+      inputField("email", "Email", "email", profile.email, true),
+      inputField("full_name", "Full Name", "text", profile.full_name, false),
+      selectField("role", "Role", [
+        { value: "viewer", label: "Viewer" },
+        { value: "staff", label: "Staff" },
+        { value: "supervisor", label: "Supervisor" },
+        { value: "president", label: "President" },
+        { value: "administrator", label: "Administrator" }
+      ], normalizeRole(profile.role), true)
+    ]
+  });
+}
+
+function openChangePasswordModal() {
+  openModal({
+    title: "Change Password",
+    mode: "change_password",
+    editingId: null,
+    fields: [
+      `<div class="form-note success">
+        Set a new password for your signed-in account. Use at least 6 characters.
+      </div>`,
+      inputField("new_password", "New Password", "password", "", true, { minlength: 6, autocomplete: "new-password" }),
+      inputField("confirm_password", "Confirm New Password", "password", "", true, { minlength: 6, autocomplete: "new-password" })
+    ]
+  });
 }
 
 function openModal({ title, mode, editingId, fields }) {
@@ -931,6 +1401,24 @@ function closeModal() {
 
 async function handleModalSubmit(event) {
   event.preventDefault();
+  if (state.modalMode === "change_password") {
+    await handleChangePasswordSubmit(event.currentTarget);
+    return;
+  }
+
+  if (state.modalMode === "user_profiles" && !isAdmin()) {
+    showToast("Only administrators can edit user accounts.", "error");
+    return;
+  }
+  if (state.modalMode === "personnel" && !canManagePersonnel()) {
+    showToast("Only administrators can manage personnel.", "error");
+    return;
+  }
+  if (!["personnel", "user_profiles"].includes(state.modalMode) && !canManageRecords()) {
+    showToast("Your account is view-only until an administrator assigns a role.", "error");
+    return;
+  }
+
   const formData = new FormData(event.currentTarget);
   const payload = Object.fromEntries(formData.entries());
 
@@ -965,7 +1453,40 @@ async function handleModalSubmit(event) {
   }
 }
 
+async function handleChangePasswordSubmit(form) {
+  const formData = new FormData(form);
+  const newPassword = String(formData.get("new_password") || "");
+  const confirmPassword = String(formData.get("confirm_password") || "");
+
+  if (newPassword.length < 6) {
+    showToast("Password must be at least 6 characters.", "error");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast("Password confirmation does not match.", "error");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const { error } = await db.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    showToast("Password changed successfully.", "success");
+    closeModal();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
 async function deleteRecord(table, id) {
+  if (!canDeleteRecords()) {
+    showToast("Only administrators can delete records.", "error");
+    return;
+  }
+
   const confirmed = window.confirm("Delete this record? This action cannot be undone.");
   if (!confirmed) return;
 
@@ -974,6 +1495,35 @@ async function deleteRecord(table, id) {
     const { error } = await db.from(table).delete().eq("id", id);
     if (error) throw error;
     showToast("Record deleted.", "success");
+    await loadAllData();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function updateUserRole(id, role) {
+  if (!isAdmin()) {
+    showToast("Only administrators can update roles.", "error");
+    return;
+  }
+
+  if (id === state.session.user.id) {
+    showToast("You cannot change your own role while signed in.", "error");
+    renderAdminUsers();
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const { error } = await db
+      .from("user_profiles")
+      .update({ role })
+      .eq("id", id);
+
+    if (error) throw error;
+    showToast("User role updated.", "success");
     await loadAllData();
   } catch (error) {
     showToast(error.message, "error");
@@ -1061,7 +1611,7 @@ function actionPlanItemPromptField() {
   if (state.planItems.length) {
     return `
       <div class="form-note success">
-        Choose a plan first, then select the specific plan item that needs action taken.
+        Choose a plan first, then select the specific plan item that needs corrective action.
       </div>
     `;
   }
@@ -1069,7 +1619,7 @@ function actionPlanItemPromptField() {
   return `
     <div class="form-note warning">
       <strong>No plan items available.</strong>
-      Action Taken records attach to plan items, not directly to plans. Open a plan and add at least one plan item first.
+      Corrective action records attach to plan items, not directly to plans. Open a plan and add at least one plan item first.
       <button class="ghost-btn" type="button" onclick="quickGoToPlans()">Go to Plans</button>
     </div>
   `;
@@ -1091,12 +1641,12 @@ function actionPlanFilterField(selectedPlanId = "") {
   `;
 }
 
-function planItemSelectField(selectedItemId = "") {
+function planItemSelectField(selectedItemId = "", name = "plan_item_id", label = "Plan Item", id = "actionPlanItemSelect") {
   const disabled = state.planItems.length ? "" : "disabled";
   return `
     <label>
-      Plan Item
-      <select name="plan_item_id" id="actionPlanItemSelect" required ${disabled}>
+      ${label}
+      <select name="${name}" id="${id}" required ${disabled}>
         <option value="">${state.planItems.length ? "Select Plan Item" : "No plan items available"}</option>
         ${state.planItems.map((item) => {
           const plan = state.plans.find((record) => record.id === item.plan_id);
@@ -1164,6 +1714,12 @@ function personnelOptions() {
   }));
 }
 
+function roleOptions(selectedRole = "viewer") {
+  return ["viewer", "staff", "supervisor", "president", "administrator"].map((role) => `
+    <option value="${role}" ${role === (selectedRole || "viewer") ? "selected" : ""}>${formattedRole(role)}</option>
+  `).join("");
+}
+
 function planItemOptions() {
   return state.planItems.map((item) => {
     const plan = state.plans.find((record) => record.id === item.plan_id);
@@ -1172,6 +1728,20 @@ function planItemOptions() {
       label: `${plan?.plan_title || "Plan"} - ${item.category || item.objective || "Item"}`
     };
   });
+}
+
+function checkRecordOptions() {
+  return state.checkRecords.map((record) => ({
+    value: record.id,
+    label: `${planItemName(record.plan_item_id)} - ${record.check_result || "Check"} (${formatDate(record.date_checked)})`
+  }));
+}
+
+function planItemName(id) {
+  const item = state.planItems.find((record) => record.id === id);
+  if (!item) return "Not assigned";
+  const plan = state.plans.find((record) => record.id === item.plan_id);
+  return `${plan?.plan_title || "Plan"} - ${item.category || item.objective || "Plan Item"}`;
 }
 
 function personName(id) {
@@ -1303,6 +1873,14 @@ function validateDates(mode, payload) {
     return "Date checked cannot be in the future.";
   }
 
+  if (mode === "do_records" && payload.date_performed && payload.date_performed > today) {
+    return "Date performed cannot be in the future.";
+  }
+
+  if (mode === "check_records" && payload.date_checked && payload.date_checked > today) {
+    return "Date checked cannot be in the future.";
+  }
+
   return "";
 }
 
@@ -1399,8 +1977,12 @@ function escapeAttribute(value) {
 window.openPersonnelModal = openPersonnelModal;
 window.openPlanModal = openPlanModal;
 window.openPlanItemModal = openPlanItemModal;
+window.openDoModal = openDoModal;
+window.openCheckModal = openCheckModal;
 window.openActionModal = openActionModal;
+window.openUserProfileModal = openUserProfileModal;
 window.deleteRecord = deleteRecord;
+window.updateUserRole = updateUserRole;
 window.selectPlan = selectPlan;
 window.closeModal = closeModal;
 window.applyMonitoringTemplate = applyMonitoringTemplate;
@@ -1409,7 +1991,11 @@ window.filterActionPlanItems = filterActionPlanItems;
 window.quickGoToPlans = quickGoToPlans;
 window.exportPersonnelCsv = exportPersonnelCsv;
 window.exportPlansCsv = exportPlansCsv;
+window.exportDoCsv = exportDoCsv;
+window.exportCheckCsv = exportCheckCsv;
 window.exportActionsCsv = exportActionsCsv;
 window.printPersonnelReport = printPersonnelReport;
 window.printPlansReport = printPlansReport;
+window.printDoReport = printDoReport;
+window.printCheckReport = printCheckReport;
 window.printActionsReport = printActionsReport;
