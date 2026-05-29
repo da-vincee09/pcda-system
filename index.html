@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>4K Enterprise PDCA Management System</title>
+  <title>Workflow Operations Platform</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260529-db-template-integration">
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -18,15 +18,15 @@
       <div class="auth-brand">
         <div class="brand-mark" aria-hidden="true">
           <span>PDCA</span>
-          <small>4K</small>
+          <small>OPS</small>
         </div>
         <div>
-          <p class="eyebrow">4K Enterprise Corporation</p>
-          <p class="auth-location">Food Manufacturing Compliance</p>
+          <p class="eyebrow">Configurable Business Workspace</p>
+          <p class="auth-location">Universal Workflow Operations</p>
         </div>
       </div>
-      <h1 id="loginTitle">PDCA Compliance Management System</h1>
-      <p class="auth-copy">Secure Plan, Do, Check, and Act records for food safety compliance in one controlled workspace.</p>
+      <h1 id="loginTitle">Workflow Operations Platform</h1>
+      <p class="auth-copy">Plan, run, verify, and improve business workflows across teams, approvals, tasks, and corrective actions.</p>
 
       <form id="loginForm" class="auth-form">
         <label>Email
@@ -73,26 +73,33 @@
   <div id="appShell" class="app-shell is-hidden">
     <aside class="sidebar" aria-label="Main navigation">
       <div class="sidebar-brand">
-        <div class="brand-mark small" aria-hidden="true">4K</div>
+        <div class="brand-mark small" aria-hidden="true">PDCA</div>
         <div>
-          <strong>4K PDCA</strong>
-          <span>Compliance Workspace</span>
+          <strong>Workflow OS</strong>
+          <span>Operations Platform</span>
         </div>
       </div>
 
       <nav class="nav-list">
         <span class="nav-section-label">Workspace</span>
-        <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon">D</span><span>Dashboard</span></button>
-        <button class="nav-link" type="button" data-view="personnelView"><span class="nav-icon">P</span><span>People</span></button>
+        <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon" data-icon="dashboard">D</span><span>Dashboard</span></button>
+        <button class="nav-link" type="button" data-view="peopleProfilesView"><span class="nav-icon" data-icon="people">H</span><span>People / HR</span></button>
+        <button class="nav-link" type="button" data-view="equipmentView"><span class="nav-icon" data-icon="equipment">E</span><span>Equipment</span></button>
+        <button class="nav-link" type="button" data-view="notificationsView"><span class="nav-icon" data-icon="bell">N</span><span>Notifications</span></button>
+        <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
+        <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
         <span class="nav-section-label">PDCA Cycle</span>
-        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon">1</span><span>Planning</span></button>
-        <button class="nav-link" type="button" data-view="doView"><span class="nav-icon">2</span><span>Implementation</span></button>
-        <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon">3</span><span>Verification</span></button>
-        <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon">4</span><span>Corrective Action</span></button>
+        <button class="nav-link" type="button" data-view="monitoringPlansView"><span class="nav-icon" data-icon="plan">P</span><span>Workflows</span></button>
+        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon" data-icon="items">I</span><span>Plan Items</span></button>
+        <button class="nav-link" type="button" data-view="doView"><span class="nav-icon" data-icon="do">D</span><span>Do</span></button>
+        <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon" data-icon="check">C</span><span>Check</span></button>
+        <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon" data-icon="act">A</span><span>Act</span></button>
+        <button class="nav-link" type="button" data-view="actionCenterView"><span class="nav-icon" data-icon="manager">M</span><span>Manager Actions</span></button>
+        <button class="nav-link approval-only" type="button" data-view="approvalRequestsView"><span class="nav-icon" data-icon="approval">O</span><span>Approvals</span></button>
         <span class="nav-section-label admin-only">Administration</span>
-        <button class="nav-link nav-link-admin admin-only" type="button" data-view="adminUsersView"><span class="nav-icon">A</span><span>Admin Console</span></button>
+        <button class="nav-link nav-link-admin admin-only" type="button" data-view="adminUsersView"><span class="nav-icon" data-icon="admin">A</span><span>Admin Console</span></button>
         <span class="nav-section-label">Account</span>
-        <button id="changePasswordNavBtn" class="nav-link" type="button"><span class="nav-icon">K</span><span>Change Password</span></button>
+        <button id="changePasswordNavBtn" class="nav-link" type="button"><span class="nav-icon" data-icon="key">K</span><span>Change Password</span></button>
       </nav>
     </aside>
 
@@ -104,7 +111,7 @@
           <span></span>
         </button>
         <div>
-          <p class="eyebrow">4K Enterprise Corporation</p>
+          <p class="eyebrow" id="companyEyebrow">PDCA Management System</p>
           <h2 id="pageTitle">Dashboard</h2>
         </div>
         <div class="topbar-actions">
@@ -114,14 +121,21 @@
       </header>
 
       <div id="mobileNav" class="mobile-nav" aria-label="Mobile navigation">
-        <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon">D</span><span>Dashboard</span></button>
-        <button class="nav-link" type="button" data-view="personnelView"><span class="nav-icon">P</span><span>People</span></button>
-        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon">1</span><span>Planning</span></button>
-        <button class="nav-link" type="button" data-view="doView"><span class="nav-icon">2</span><span>Implementation</span></button>
-        <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon">3</span><span>Verification</span></button>
-        <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon">4</span><span>Corrective Action</span></button>
-        <button class="nav-link nav-link-admin admin-only" type="button" data-view="adminUsersView"><span class="nav-icon">A</span><span>Admin Console</span></button>
-        <button id="changePasswordMobileBtn" class="nav-link" type="button"><span class="nav-icon">K</span><span>Change Password</span></button>
+        <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon" data-icon="dashboard">D</span><span>Dashboard</span></button>
+        <button class="nav-link" type="button" data-view="peopleProfilesView"><span class="nav-icon" data-icon="people">H</span><span>People / HR</span></button>
+        <button class="nav-link" type="button" data-view="equipmentView"><span class="nav-icon" data-icon="equipment">E</span><span>Equipment</span></button>
+        <button class="nav-link" type="button" data-view="notificationsView"><span class="nav-icon" data-icon="bell">N</span><span>Notifications</span></button>
+        <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
+        <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
+        <button class="nav-link" type="button" data-view="monitoringPlansView"><span class="nav-icon" data-icon="plan">P</span><span>Workflows</span></button>
+        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon" data-icon="items">I</span><span>Plan Items</span></button>
+        <button class="nav-link" type="button" data-view="doView"><span class="nav-icon" data-icon="do">D</span><span>Do</span></button>
+        <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon" data-icon="check">C</span><span>Check</span></button>
+        <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon" data-icon="act">A</span><span>Act</span></button>
+        <button class="nav-link" type="button" data-view="actionCenterView"><span class="nav-icon" data-icon="manager">M</span><span>Manager Actions</span></button>
+        <button class="nav-link approval-only" type="button" data-view="approvalRequestsView"><span class="nav-icon" data-icon="approval">O</span><span>Approvals</span></button>
+        <button class="nav-link nav-link-admin admin-only" type="button" data-view="adminUsersView"><span class="nav-icon" data-icon="admin">A</span><span>Admin Console</span></button>
+        <button id="changePasswordMobileBtn" class="nav-link" type="button"><span class="nav-icon" data-icon="key">K</span><span>Change Password</span></button>
       </div>
 
       <section id="loadingOverlay" class="loading-overlay is-hidden" aria-live="polite">
@@ -132,8 +146,8 @@
       <section id="dashboardView" class="view is-active" aria-labelledby="dashboardTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Overview</p>
-            <h3 id="dashboardTitle">PDCA Compliance Dashboard</h3>
+            <p class="eyebrow">Executive Overview</p>
+            <h3 id="dashboardTitle">Business Operations Dashboard</h3>
           </div>
           <div class="heading-actions">
             <button id="refreshBtn" class="secondary-btn" type="button">Refresh</button>
@@ -142,34 +156,40 @@
 
         <div class="summary-grid">
           <article class="summary-card">
-            <span>Total Plans</span>
+            <span>Active Workflows</span>
             <strong id="totalPlans">0</strong>
           </article>
           <article class="summary-card">
-            <span>Total Plan Items</span>
+            <span>Open Tasks</span>
             <strong id="totalPlanItems">0</strong>
           </article>
           <article class="summary-card">
-            <span>Total Do Records</span>
+            <span>Team Productivity</span>
             <strong id="totalDoRecords">0</strong>
           </article>
           <article class="summary-card">
-            <span>Total Check Records</span>
+            <span>Pending Approvals</span>
             <strong id="totalCheckRecords">0</strong>
           </article>
           <article class="summary-card">
-            <span>Total Act Records</span>
+            <span>Open Issues</span>
             <strong id="totalActions">0</strong>
           </article>
           <article class="summary-card alert">
-            <span>Recent Non-Compliances</span>
+            <span>SLA Risks</span>
             <strong id="recentNonCompliances">0</strong>
           </article>
         </div>
 
         <article class="panel modules-panel">
           <div class="panel-heading">
-            <h4>Monitoring Record Modules</h4>
+            <h4>Active Workspaces</h4>
+            <label class="compact-filter">
+              Scope
+              <select id="dashboardProductLineFilter">
+                <option value="">All scopes</option>
+              </select>
+            </label>
           </div>
           <div id="monitoringModulesList" class="module-template-grid"></div>
         </article>
@@ -282,6 +302,256 @@
             </div>
           </article>
         </div>
+      </section>
+
+      <section id="settingsView" class="view" aria-labelledby="settingsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Workspace</p>
+            <h3 id="settingsTitle">Company Settings</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="editCompanySettingsBtn" class="primary-btn" type="button">Edit Settings</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div id="companySettingsCard" class="profile-grid"></div>
+        </article>
+      </section>
+
+      <section id="peopleProfilesView" class="view" aria-labelledby="peopleProfilesTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">HR Dashboard</p>
+            <h3 id="peopleProfilesTitle">HR / People</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="addPeopleProfileBtn" class="primary-btn" type="button">Add Employee Profile</button>
+          </div>
+        </div>
+
+        <div id="hrAccessNotice" class="page-notice"></div>
+
+        <div id="hrDashboardCards" class="summary-grid mini"></div>
+
+        <article class="panel hr-workspace-panel">
+          <div class="hr-toolbar">
+            <label>
+              Search
+              <input id="peopleSearchInput" type="search" placeholder="Name, ID, role, department">
+            </label>
+            <label>
+              Department
+              <select id="peopleDepartmentFilter">
+                <option value="">All departments</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select id="peopleStatusFilter">
+                <option value="">All statuses</option>
+              </select>
+            </label>
+            <label>
+              Sort
+              <select id="peopleSortSelect">
+                <option value="name">Name</option>
+                <option value="department">Department</option>
+                <option value="status">Status</option>
+                <option value="date_hired">Date hired</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="hr-layout">
+            <div>
+              <div id="peopleProfilesTable" class="employee-card-list"></div>
+            </div>
+            <aside id="employeeProfilePanel" class="employee-profile-panel">
+              <div class="empty-state">
+                <h4>Select an employee</h4>
+                <p>Employee profile tabs, documents, qualifications, and activity logs appear here.</p>
+              </div>
+            </aside>
+          </div>
+        </article>
+      </section>
+
+      <section id="equipmentView" class="view" aria-labelledby="equipmentTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Assets</p>
+            <h3 id="equipmentTitle">Equipment</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="addEquipmentBtn" class="primary-btn" type="button">Add Equipment</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Type</th>
+                  <th>Serial</th>
+                  <th>Specification</th>
+                  <th>Year</th>
+                  <th>Status</th>
+                  <th>Maintenance</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="equipmentTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="notificationsView" class="view" aria-labelledby="notificationsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Alerts</p>
+            <h3 id="notificationsTitle">Notifications</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="markAllNotificationsBtn" class="secondary-btn" type="button">Mark All Read</button>
+            <button class="secondary-btn" type="button" onclick="loadAllData()">Refresh</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div id="notificationsList" class="notification-list"></div>
+        </article>
+      </section>
+
+      <section id="monitoringPlansView" class="view" aria-labelledby="monitoringPlansTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Workflow Engine</p>
+            <h3 id="monitoringPlansTitle">Workflow Modules</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="addProductLineBtn" class="secondary-btn" type="button">Add Scope</button>
+            <button id="addMonitoringCategoryBtn" class="secondary-btn" type="button">Add Workflow Group</button>
+            <button id="addScheduleTemplateBtn" class="primary-btn" type="button">Create Workflow</button>
+          </div>
+        </div>
+        <div class="content-grid">
+          <article class="panel">
+            <div class="panel-heading"><h4>Workflow Templates</h4></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Plan Title</th>
+                    <th>Category</th>
+                    <th>Scope</th>
+                    <th>Frequency</th>
+                    <th>Due Time</th>
+                    <th class="actions-cell">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="scheduleTemplatesTable"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><h4>Configuration</h4></div>
+            <div id="monitoringSetupList" class="setup-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="taskBoardView" class="view" aria-labelledby="taskBoardTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Do / Check</p>
+            <h3 id="taskBoardTitle">Workspace Tasks</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="addGeneratedTaskBtn" class="primary-btn" type="button">Add Task</button>
+          </div>
+        </div>
+        <div class="summary-grid mini">
+          <article class="summary-card"><span>Due Today</span><strong id="newDueToday">0</strong></article>
+          <article class="summary-card alert"><span>Overdue</span><strong id="newOverdue">0</strong></article>
+          <article class="summary-card"><span>Completed</span><strong id="newCompleted">0</strong></article>
+          <article class="summary-card"><span>Open Cases</span><strong id="newOpenCases">0</strong></article>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Date</th>
+                  <th>Due</th>
+                  <th>Assigned To</th>
+                  <th>Status</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="generatedTasksTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="actionCenterView" class="view" aria-labelledby="actionCenterTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Act</p>
+            <h3 id="actionCenterTitle">Action Center</h3>
+          </div>
+          <div class="heading-actions">
+            <button id="addActionCaseBtn" class="primary-btn" type="button">Open Case</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Case</th>
+                  <th>Non Compliance</th>
+                  <th>Manager</th>
+                  <th>Status</th>
+                  <th>Due</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="actionCasesTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="approvalRequestsView" class="view" aria-labelledby="approvalRequestsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Approvals</p>
+            <h3 id="approvalRequestsTitle">Approval Queue</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="loadAllData()">Refresh</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Record</th>
+                  <th>Status</th>
+                  <th>Requested By</th>
+                  <th>Approver</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="approvalRequestsTable"></tbody>
+            </table>
+          </div>
+        </article>
       </section>
 
       <section id="personnelView" class="view" aria-labelledby="personnelTitle">
@@ -481,18 +751,28 @@
               Role
               <select name="role" required>
                 <option value="viewer">Viewer</option>
+                <option value="employee">Employee</option>
                 <option value="staff">Staff</option>
                 <option value="supervisor">Supervisor</option>
+                <option value="hr_staff">HR Staff</option>
+                <option value="hr_manager">HR Manager</option>
                 <option value="president">President</option>
-                <option value="administrator">Administrator</option>
+                <option value="food_handler">Frontline Operator</option>
+                <option value="production_supervisor">Production Supervisor</option>
+                <option value="production_manager">Production Manager</option>
+                <option value="food_safety_compliance_officer">Compliance Officer</option>
+                <option value="owner">Owner</option>
+                <option value="general_manager">General Manager</option>
+                <option value="administrator">System Administrator</option>
               </select>
             </label>
             <button class="primary-btn" type="submit">Create Account</button>
           </form>
           <div class="permission-panel">
             <strong>Role permissions</strong>
-            <p>Users without an assigned role remain view-only. Staff and supervisors can create and update PDCA records. Administrators can manage roles, personnel, and deletions.</p>
+            <p>Adjust what each role can view, create, edit, delete, approve, and export. Changes are saved directly to Supabase role permissions.</p>
           </div>
+          <div id="permissionMatrix" class="permission-matrix"></div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -505,6 +785,23 @@
                 </tr>
               </thead>
               <tbody id="adminUsersTable"></tbody>
+            </table>
+          </div>
+        </article>
+        <article class="panel admin-panel-stack">
+          <div class="panel-heading"><h4>Audit Trail</h4></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>User</th>
+                  <th>Action</th>
+                  <th>Table</th>
+                  <th>Record</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogsTable"></tbody>
             </table>
           </div>
         </article>
@@ -525,6 +822,6 @@
   <section id="printArea" class="print-area" aria-hidden="true"></section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20260527-password-sidebar"></script>
+  <script src="app.js?v=20260529-notification-rls-detect"></script>
 </body>
 </html>
