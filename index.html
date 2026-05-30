@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260529-db-template-integration">
+  <link rel="stylesheet" href="styles.css?v=20260530-responsive-sidebar">
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -72,6 +72,7 @@
 
   <div id="appShell" class="app-shell is-hidden">
     <aside class="sidebar" aria-label="Main navigation">
+      <div id="sidebarResizeHandle" class="sidebar-resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" tabindex="0"></div>
       <div class="sidebar-brand">
         <div class="brand-mark small" aria-hidden="true">PDCA</div>
         <div>
@@ -81,10 +82,11 @@
       </div>
 
       <nav class="nav-list">
-        <span class="nav-section-label">Workspace</span>
+        <span class="nav-section-label">Operations</span>
         <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon" data-icon="dashboard">D</span><span>Dashboard</span></button>
         <button class="nav-link" type="button" data-view="peopleProfilesView"><span class="nav-icon" data-icon="people">H</span><span>People / HR</span></button>
         <button class="nav-link" type="button" data-view="equipmentView"><span class="nav-icon" data-icon="equipment">E</span><span>Equipment</span></button>
+        <button class="nav-link" type="button" data-view="sopView"><span class="nav-icon" data-icon="sop"></span><span>SOP Library</span></button>
         <button class="nav-link" type="button" data-view="notificationsView"><span class="nav-icon" data-icon="bell">N</span><span>Notifications</span></button>
         <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
         <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
@@ -124,6 +126,7 @@
         <button class="nav-link is-active" type="button" data-view="dashboardView"><span class="nav-icon" data-icon="dashboard">D</span><span>Dashboard</span></button>
         <button class="nav-link" type="button" data-view="peopleProfilesView"><span class="nav-icon" data-icon="people">H</span><span>People / HR</span></button>
         <button class="nav-link" type="button" data-view="equipmentView"><span class="nav-icon" data-icon="equipment">E</span><span>Equipment</span></button>
+        <button class="nav-link" type="button" data-view="sopView"><span class="nav-icon" data-icon="sop"></span><span>SOP</span></button>
         <button class="nav-link" type="button" data-view="notificationsView"><span class="nav-icon" data-icon="bell">N</span><span>Notifications</span></button>
         <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
         <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
@@ -181,18 +184,55 @@
           </article>
         </div>
 
+        <article class="panel dashboard-charts-panel">
+          <div class="panel-heading">
+            <h4>Dashboard Insights</h4>
+          </div>
+          <div id="dashboardChartsGrid" class="dashboard-charts-grid"></div>
+        </article>
+
         <article class="panel modules-panel">
           <div class="panel-heading">
             <h4>Active Workspaces</h4>
+            <button id="addWorkspaceBtn" class="secondary-btn" type="button">Create Workspace</button>
             <label class="compact-filter">
-              Scope
+              Workspace
               <select id="dashboardProductLineFilter">
-                <option value="">All scopes</option>
+                <option value="">All workspaces</option>
               </select>
             </label>
           </div>
-          <div id="monitoringModulesList" class="module-template-grid"></div>
+          <div id="activeWorkspacesList" class="module-template-grid"></div>
         </article>
+
+        <div class="content-grid dashboard-split">
+          <article class="panel">
+            <div class="panel-heading">
+              <h4>Workspace Tasks</h4>
+              <button class="secondary-btn" type="button" data-view="taskBoardView">Open Tasks</button>
+            </div>
+            <div id="workspaceTasksDashboard" class="workspace-task-dashboard"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <h4>SOP</h4>
+              <button class="secondary-btn" type="button" data-view="sopView">Open SOP Library</button>
+            </div>
+            <div id="sopDashboardCards" class="summary-grid mini"></div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>SOP</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="recentSopsDashboardTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
 
         <div class="stage-grid">
           <article class="stage-card completed">
@@ -334,6 +374,55 @@
 
         <div id="hrDashboardCards" class="summary-grid mini"></div>
 
+        <article class="panel attendance-panel">
+          <div class="panel-heading">
+            <h4>Attendance</h4>
+            <button id="addAttendanceBtn" class="primary-btn" type="button">Add Attendance Record</button>
+          </div>
+          <div class="hr-toolbar attendance-toolbar">
+            <label>
+              Date
+              <input id="attendanceDateFilter" type="date">
+            </label>
+            <label>
+              Employee
+              <select id="attendanceEmployeeFilter">
+                <option value="">All employees</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select id="attendanceStatusFilter">
+                <option value="">All statuses</option>
+                <option value="present">Present</option>
+                <option value="late">Late</option>
+                <option value="absent">Absent</option>
+                <option value="on_leave">On Leave</option>
+              </select>
+            </label>
+            <div class="form-actions inline-actions">
+              <button id="clearAttendanceFiltersBtn" class="ghost-btn" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Employee ID</th>
+                  <th>Date</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Status</th>
+                  <th>Notes / Remarks</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTable"></tbody>
+            </table>
+          </div>
+        </article>
+
         <article class="panel hr-workspace-panel">
           <div class="hr-toolbar">
             <label>
@@ -408,6 +497,38 @@
         </article>
       </section>
 
+      <section id="sopView" class="view" aria-labelledby="sopTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Knowledge Base</p>
+            <h3 id="sopTitle">Standard Operating Procedure</h3>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportSopCsv()">Export CSV</button>
+            <button class="secondary-btn" type="button" onclick="printSopReport()">Print</button>
+            <button id="addSopBtn" class="primary-btn" type="button">Create SOP</button>
+          </div>
+        </div>
+        <article class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>SOP</th>
+                  <th>Department</th>
+                  <th>Owner</th>
+                  <th>Version</th>
+                  <th>Status</th>
+                  <th>Review Date</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sopTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
       <section id="notificationsView" class="view" aria-labelledby="notificationsTitle">
         <div class="section-heading">
           <div>
@@ -431,7 +552,7 @@
             <h3 id="monitoringPlansTitle">Workflow Modules</h3>
           </div>
           <div class="heading-actions">
-            <button id="addProductLineBtn" class="secondary-btn" type="button">Add Scope</button>
+            <button id="addProductLineBtn" class="secondary-btn" type="button">Create Workspace</button>
             <button id="addMonitoringCategoryBtn" class="secondary-btn" type="button">Add Workflow Group</button>
             <button id="addScheduleTemplateBtn" class="primary-btn" type="button">Create Workflow</button>
           </div>
@@ -445,7 +566,7 @@
                   <tr>
                     <th>Plan Title</th>
                     <th>Category</th>
-                    <th>Scope</th>
+                    <th>Workspace</th>
                     <th>Frequency</th>
                     <th>Due Time</th>
                     <th class="actions-cell">Actions</th>
@@ -465,11 +586,17 @@
       <section id="taskBoardView" class="view" aria-labelledby="taskBoardTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Do / Check</p>
+            <p class="eyebrow">Tasks inside a Workspace</p>
             <h3 id="taskBoardTitle">Workspace Tasks</h3>
           </div>
           <div class="heading-actions">
-            <button id="addGeneratedTaskBtn" class="primary-btn" type="button">Add Task</button>
+            <label class="compact-filter">
+              Workspace
+              <select id="taskWorkspaceFilter">
+                <option value="">All workspace tasks</option>
+              </select>
+            </label>
+            <button id="addGeneratedTaskBtn" class="primary-btn" type="button">Add Workspace Task</button>
           </div>
         </div>
         <div class="summary-grid mini">
@@ -484,6 +611,7 @@
               <thead>
                 <tr>
                   <th>Task</th>
+                  <th>Workspace</th>
                   <th>Date</th>
                   <th>Due</th>
                   <th>Assigned To</th>
@@ -822,6 +950,6 @@
   <section id="printArea" class="print-area" aria-hidden="true"></section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20260529-notification-rls-detect"></script>
+  <script src="app.js?v=20260530-responsive-sidebar"></script>
 </body>
 </html>

@@ -34,8 +34,11 @@ const state = {
   templateWorkflows: [],
   equipmentMaintenanceHistory: [],
   employeeDocuments: [],
+  standardOperatingProcedures: [],
+  attendanceRecords: [],
   userProfile: null,
   userProfiles: [],
+  tableErrors: {},
   realtimeChannel: null,
   selectedPlanId: null,
   selectedPeopleProfileId: null,
@@ -208,10 +211,17 @@ const elements = {
   refreshBtn: $("#refreshBtn"),
   markAllNotificationsBtn: $("#markAllNotificationsBtn"),
   dashboardProductLineFilter: $("#dashboardProductLineFilter"),
+  activeWorkspacesList: $("#activeWorkspacesList"),
+  dashboardChartsGrid: $("#dashboardChartsGrid"),
+  workspaceTasksDashboard: $("#workspaceTasksDashboard"),
+  sopDashboardCards: $("#sopDashboardCards"),
+  recentSopsDashboardTable: $("#recentSopsDashboardTable"),
+  taskWorkspaceFilter: $("#taskWorkspaceFilter"),
   pageTitle: $("#pageTitle"),
   companyEyebrow: $("#companyEyebrow"),
   roleBadge: $("#roleBadge"),
   menuToggle: $("#menuToggle"),
+  sidebarResizeHandle: $("#sidebarResizeHandle"),
   mobileNav: $("#mobileNav"),
   loadingOverlay: $("#loadingOverlay"),
   toast: $("#toast"),
@@ -234,6 +244,15 @@ const elements = {
   peopleStatusFilter: $("#peopleStatusFilter"),
   peopleSortSelect: $("#peopleSortSelect"),
   employeeProfilePanel: $("#employeeProfilePanel"),
+  attendanceDateFilter: $("#attendanceDateFilter"),
+  attendanceEmployeeFilter: $("#attendanceEmployeeFilter"),
+  attendanceStatusFilter: $("#attendanceStatusFilter"),
+  addAttendanceBtn: $("#addAttendanceBtn"),
+  clearAttendanceFiltersBtn: $("#clearAttendanceFiltersBtn"),
+  attendanceTable: $("#attendanceTable"),
+  sopTable: $("#sopTable"),
+  addSopBtn: $("#addSopBtn"),
+  addWorkspaceBtn: $("#addWorkspaceBtn"),
   equipmentTable: $("#equipmentTable"),
   scheduleTemplatesTable: $("#scheduleTemplatesTable"),
   monitoringSetupList: $("#monitoringSetupList"),
@@ -251,6 +270,7 @@ const iconPaths = {
   tasks: '<path d="M9 6h11"></path><path d="M9 12h11"></path><path d="M9 18h11"></path><path d="M4 6l1 1 2-2"></path><path d="M4 12l1 1 2-2"></path><path d="M4 18l1 1 2-2"></path>',
   people: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.9"></path><path d="M16 3.1a4 4 0 0 1 0 7.8"></path>',
   equipment: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-5.6 5.6a2.1 2.1 0 0 1-3-3l5.6-5.6a6 6 0 0 1 7.9-7.9l-3.1 3.1z"></path>',
+  sop: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path><path d="M8 9h2"></path>',
   settings: '<path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.4 1z"></path>',
   plan: '<path d="M8 2v4"></path><path d="M16 2v4"></path><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path>',
   items: '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>',
@@ -265,6 +285,7 @@ const iconPaths = {
 };
 
 document.addEventListener("DOMContentLoaded", init);
+exposeAppGlobals();
 
 // Bootstraps Supabase auth before showing protected dashboard content.
 async function init() {
@@ -280,8 +301,21 @@ async function init() {
   });
 }
 
+function exposeAppGlobals() {
+  Object.assign(window, {
+    __pdcaState: state,
+    workspaceDashboardDebug,
+    loadAllData,
+    renderMonitoringModules,
+    openWorkspace,
+    openSopWorkspace,
+    openProductLineModal
+  });
+}
+
 function bindStaticEvents() {
   renderNavigationIcons();
+  setupResizableSidebar();
   elements.loginForm.addEventListener("submit", handleLogin);
   elements.registerForm.addEventListener("submit", handleRegister);
   $("#showRegister").addEventListener("click", () => switchAuth("register"));
@@ -301,6 +335,7 @@ function bindStaticEvents() {
   elements.refreshBtn.addEventListener("click", loadAllData);
   elements.markAllNotificationsBtn?.addEventListener("click", markAllNotificationsRead);
   elements.dashboardProductLineFilter?.addEventListener("change", renderMonitoringModules);
+  elements.taskWorkspaceFilter?.addEventListener("change", renderTaskBoard);
   elements.closeModalBtn.addEventListener("click", closeModal);
   elements.modalBackdrop.addEventListener("click", (event) => {
     if (event.target === elements.modalBackdrop) closeModal();
@@ -324,10 +359,22 @@ function bindStaticEvents() {
   $("#addActionBtn").addEventListener("click", () => openActionModal());
   $("#editCompanySettingsBtn")?.addEventListener("click", () => openCompanySettingsModal());
   $("#addPeopleProfileBtn")?.addEventListener("click", () => openPeopleProfileModal());
+  $("#addSopBtn")?.addEventListener("click", () => openSopModal());
+  $("#addWorkspaceBtn")?.addEventListener("click", () => openProductLineModal());
   elements.peopleSearchInput?.addEventListener("input", renderPeopleProfiles);
   elements.peopleDepartmentFilter?.addEventListener("change", renderPeopleProfiles);
   elements.peopleStatusFilter?.addEventListener("change", renderPeopleProfiles);
   elements.peopleSortSelect?.addEventListener("change", renderPeopleProfiles);
+  elements.attendanceDateFilter?.addEventListener("change", renderAttendance);
+  elements.attendanceEmployeeFilter?.addEventListener("change", renderAttendance);
+  elements.attendanceStatusFilter?.addEventListener("change", renderAttendance);
+  elements.addAttendanceBtn?.addEventListener("click", () => openAttendanceModal());
+  elements.clearAttendanceFiltersBtn?.addEventListener("click", () => {
+    if (elements.attendanceDateFilter) elements.attendanceDateFilter.value = "";
+    if (elements.attendanceEmployeeFilter) elements.attendanceEmployeeFilter.value = "";
+    if (elements.attendanceStatusFilter) elements.attendanceStatusFilter.value = "";
+    renderAttendance();
+  });
   $("#addEquipmentBtn")?.addEventListener("click", () => openEquipmentModal());
   $("#addProductLineBtn")?.addEventListener("click", () => openProductLineModal());
   $("#addMonitoringCategoryBtn")?.addEventListener("click", () => openMonitoringCategoryModal());
@@ -356,6 +403,67 @@ function renderNavigationIcons() {
     if (!path) return;
     icon.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${path}</svg>`;
   });
+}
+
+function setupResizableSidebar() {
+  if (!elements.sidebarResizeHandle || !elements.appShell) return;
+
+  const savedWidth = Number(localStorage.getItem("pdcaSidebarWidth"));
+  if (savedWidth) setSidebarWidth(savedWidth);
+
+  let isResizing = false;
+
+  const startResize = (event) => {
+    if (window.matchMedia("(max-width: 820px)").matches) return;
+    isResizing = true;
+    document.body.classList.add("is-resizing-sidebar");
+    elements.sidebarResizeHandle.setPointerCapture?.(event.pointerId);
+  };
+
+  const resize = (event) => {
+    if (!isResizing) return;
+    setSidebarWidth(event.clientX);
+  };
+
+  const stopResize = (event) => {
+    if (!isResizing) return;
+    isResizing = false;
+    document.body.classList.remove("is-resizing-sidebar");
+    elements.sidebarResizeHandle.releasePointerCapture?.(event.pointerId);
+    localStorage.setItem("pdcaSidebarWidth", String(currentSidebarWidth()));
+  };
+
+  elements.sidebarResizeHandle.addEventListener("pointerdown", startResize);
+  window.addEventListener("pointermove", resize);
+  window.addEventListener("pointerup", stopResize);
+  window.addEventListener("resize", () => {
+    if (window.matchMedia("(max-width: 820px)").matches) return;
+    setSidebarWidth(currentSidebarWidth());
+  });
+  elements.sidebarResizeHandle.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const step = event.shiftKey ? 32 : 16;
+    const current = currentSidebarWidth();
+    const next = event.key === "Home"
+      ? 220
+      : event.key === "End"
+        ? 420
+        : current + (event.key === "ArrowRight" ? step : -step);
+    setSidebarWidth(next);
+    localStorage.setItem("pdcaSidebarWidth", String(currentSidebarWidth()));
+  });
+}
+
+function setSidebarWidth(width) {
+  const maxWidth = Math.min(440, Math.max(260, window.innerWidth * 0.38));
+  const nextWidth = Math.min(Math.max(Number(width) || 280, 220), maxWidth);
+  elements.appShell.style.setProperty("--sidebar-width", `${Math.round(nextWidth)}px`);
+}
+
+function currentSidebarWidth() {
+  const value = getComputedStyle(elements.appShell).getPropertyValue("--sidebar-width");
+  return Number.parseInt(value, 10) || 280;
 }
 
 async function updateAuthView() {
@@ -543,7 +651,9 @@ async function loadAllData() {
       fetchTable("dynamic_checklists", "created_at", false),
       fetchTable("template_workflows", "created_at", false),
       fetchTable("equipment_maintenance_history", "created_at", true),
-      fetchTable("employee_documents", "created_at", true)
+      fetchTable("employee_documents", "created_at", true),
+      fetchTable("standard_operating_procedures", "created_at", true),
+      fetchTable("attendance", "created_at", true)
     ]);
 
     const [
@@ -552,7 +662,7 @@ async function loadAllData() {
       equipment, productLines, monitoringCategories, scheduleTemplates, generatedTasks,
       taskDoRecords, taskCheckRecords, actionCases, rolePermissions, notifications, auditLogs,
       fileAttachments, approvalRequests, monitoringTemplatesDb, dynamicChecklists, templateWorkflows,
-      equipmentMaintenanceHistory, employeeDocuments
+      equipmentMaintenanceHistory, employeeDocuments, standardOperatingProcedures, attendanceRecords
     ] = results.map((result) => (
       result.status === "fulfilled" ? result.value : []
     ));
@@ -577,7 +687,7 @@ async function loadAllData() {
     state.personTrainings = personTrainings;
     state.personHealthCertificates = personHealthCertificates;
     state.equipment = equipment;
-    state.productLines = productLines;
+    state.productLines = productLines.length ? productLines : await fetchWorkspacesDirect();
     state.monitoringCategories = monitoringCategories;
     state.scheduleTemplates = scheduleTemplates;
     state.generatedTasks = generatedTasks;
@@ -594,9 +704,19 @@ async function loadAllData() {
     state.templateWorkflows = templateWorkflows;
     state.equipmentMaintenanceHistory = equipmentMaintenanceHistory;
     state.employeeDocuments = employeeDocuments;
+    state.standardOperatingProcedures = standardOperatingProcedures;
+    state.attendanceRecords = attendanceRecords;
 
-    const failedLoad = results.find((result) => result.status === "rejected");
-    if (failedLoad) showToast(failedLoad.reason.message, "error");
+    const failedLoads = results.filter((result) => result.status === "rejected");
+    state.tableErrors = failedLoads.reduce((errors, result) => {
+      const tableName = result.reason.table || "unknown";
+      errors[tableName] = result.reason.message || "Table could not load.";
+      return errors;
+    }, {});
+    if (failedLoads.length) {
+      console.warn("Some tables could not load:", failedLoads.map((result) => result.reason.message));
+      showToast(`Some tables could not load: ${failedLoads.map((result) => result.reason.table || result.reason.message).slice(0, 3).join(", ")}`, "error");
+    }
 
     if (state.selectedPlanId && !state.plans.some((plan) => plan.id === state.selectedPlanId)) {
       state.selectedPlanId = null;
@@ -616,8 +736,37 @@ async function fetchTable(table, orderColumn, descending = false) {
     .select("*")
     .order(orderColumn, { ascending: !descending });
 
-  if (error) throw error;
+  if (error) {
+    error.table = table;
+    throw error;
+  }
   return data || [];
+}
+
+async function fetchWorkspacesDirect() {
+  if (typeof window.fetch !== "function") return [];
+
+  try {
+    const { data } = await db.auth.getSession();
+    const token = data?.session?.access_token || SUPABASE_KEY;
+    const response = await window.fetch(`${SUPABASE_URL}/rest/v1/product_lines?select=*&order=created_at.desc`, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      console.warn("Direct workspace fetch failed:", await response.text());
+      return [];
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.warn("Direct workspace fetch skipped:", error.message);
+    return [];
+  }
 }
 
 function setupRealtime() {
@@ -633,7 +782,10 @@ function setupRealtime() {
       }
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "generated_tasks" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "product_lines" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "action_cases" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "standard_operating_procedures" }, () => loadAllData())
     .subscribe();
 }
 
@@ -655,6 +807,8 @@ function renderAll() {
   renderAdminUsers();
   renderCompanySettings();
   renderPeopleProfiles();
+  renderAttendance();
+  renderSops();
   renderEquipment();
   renderMonitoringPlans();
   renderTaskBoard();
@@ -757,6 +911,14 @@ function canApproveRecords() {
   return permissionValue("approvals", "approve", ["administrator", "general_manager", "owner", "president"].includes(currentRole()));
 }
 
+function canViewSops() {
+  return Boolean(state.session);
+}
+
+function canManageSops() {
+  return permissionValue("sop", "edit", ["administrator", "owner", "general_manager", "production_manager", "production_supervisor", "supervisor", "hr_manager"].includes(currentRole()));
+}
+
 function applyPermissions() {
   const role = currentRole();
   if (elements.roleBadge) {
@@ -770,9 +932,11 @@ function applyPermissions() {
   $$(".approval-only").forEach((item) => {
     item.hidden = !canApproveRecords();
   });
-
   setControlAccess("#addPersonnelBtn", canManagePersonnel());
   setControlAccess("#addPeopleProfileBtn", canManagePersonnel());
+  setControlAccess("#addAttendanceBtn", canManagePersonnel());
+  setControlAccess("#addSopBtn", canManageSops());
+  setControlAccess("#addWorkspaceBtn", canManagePlans());
   setControlAccess("#editCompanySettingsBtn", canManageCompanySettings());
   setControlAccess("#addEquipmentBtn", canManageEquipment());
   ["#addPlanBtn", "#addProductLineBtn", "#addMonitoringCategoryBtn", "#addScheduleTemplateBtn", "#addGeneratedTaskBtn"].forEach((selector) => {
@@ -788,6 +952,8 @@ function applyPermissions() {
   if (activeAdminView && !isAdmin()) switchView("dashboardView");
   const activeApprovalView = $("#approvalRequestsView")?.classList.contains("is-active");
   if (activeApprovalView && !canApproveRecords()) switchView("dashboardView");
+  const activeSopView = $("#sopView")?.classList.contains("is-active");
+  if (activeSopView && !canViewSops()) switchView("dashboardView");
 }
 
 function setControlAccess(selector, allowed) {
@@ -803,7 +969,7 @@ function renderDashboard() {
   const today = startOfDay(new Date());
   const todayInput = toDateInputValue(today);
   const openNewCases = state.actionCases.filter((item) => !["verified", "closed"].includes(item.case_status));
-  const pendingApprovals = state.approvalRequests.filter((item) => item.status === "pending").length;
+  const pendingApprovals = state.approvalRequests.filter((item) => (item.approval_status || item.status) === "pending").length;
   if (state.generatedTasks.length) {
     const newCompleted = state.generatedTasks.filter((task) => ["completed", "checked"].includes(task.task_status)).length;
     const newProgress = Math.round((newCompleted / state.generatedTasks.length) * 100);
@@ -847,6 +1013,10 @@ function renderDashboard() {
     $("#latestActionsTable").innerHTML = renderRows(openNewCases.slice(0, 5), (item) => `
       <tr><td>${escapeHtml(item.non_compliance_note)}</td><td>${escapeHtml(item.manager_instruction || item.corrective_action || "Awaiting manager instruction")}</td></tr>
     `, 2, "No open action cases.");
+    renderDashboardCharts();
+    renderMonitoringModules();
+    renderWorkspaceTasksDashboard();
+    renderSopDashboardSection();
     return;
   }
 
@@ -952,27 +1122,332 @@ function renderDashboard() {
   );
 
   renderMonitoringModules();
+  renderWorkspaceTasksDashboard();
+  renderSopDashboardSection();
+  renderDashboardCharts();
+}
+
+function renderDashboardCharts() {
+  if (!elements.dashboardChartsGrid) return;
+
+  const pdcaCounts = dashboardPdcaDistribution();
+  const taskStatusCounts = dashboardTaskStatusCounts();
+  const completionTrend = dashboardCompletionTrend();
+  const attendanceCounts = attendanceStatusCounts();
+  const sopCounts = sopStatusCounts();
+
+  elements.dashboardChartsGrid.innerHTML = [
+    chartCard("Workspace PDCA Distribution", renderDonutChart(pdcaCounts)),
+    chartCard("Workspace Task Status", renderBarChart(taskStatusCounts)),
+    chartCard("Task Completion Trend", renderLineChart(completionTrend)),
+    chartCard("Attendance Summary", state.tableErrors.attendance ? chartErrorState("Attendance table unavailable") : renderBarChart(attendanceCounts)),
+    chartCard("SOP Status Summary", state.tableErrors.standard_operating_procedures ? chartErrorState("SOP table unavailable") : renderDonutChart(sopCounts))
+  ].join("");
+}
+
+function chartCard(title, chartMarkup) {
+  return `
+    <section class="chart-card">
+      <header>
+        <strong>${escapeHtml(title)}</strong>
+      </header>
+      ${chartMarkup}
+    </section>
+  `;
+}
+
+function dashboardPdcaDistribution() {
+  const counts = { Planning: 0, Do: 0, Check: 0, Act: 0, Completed: 0 };
+
+  state.productLines.forEach((workspace) => {
+    const stage = String(workspace.pdca_stage || workspace.stage || workspace.status || "planning").toLowerCase();
+    if (["completed", "complete", "closed", "done"].includes(stage)) counts.Completed += 1;
+    else if (stage.includes("act")) counts.Act += 1;
+    else if (stage.includes("check")) counts.Check += 1;
+    else if (stage.includes("do") || stage.includes("progress")) counts.Do += 1;
+    else counts.Planning += 1;
+  });
+
+  if (!state.productLines.length && state.generatedTasks.length) {
+    state.generatedTasks.forEach((task) => {
+      const status = taskDisplayStatus(task);
+      if (["completed", "checked"].includes(status)) counts.Completed += 1;
+      else if (status === "not_compliant") counts.Act += 1;
+      else if (status === "in_progress") counts.Do += 1;
+      else if (status === "overdue") counts.Check += 1;
+      else counts.Planning += 1;
+    });
+  }
+
+  return Object.entries(counts).map(([label, value]) => ({ label, value }));
+}
+
+function dashboardTaskStatusCounts() {
+  const counts = { Open: 0, "In Progress": 0, Completed: 0, Overdue: 0 };
+  state.generatedTasks.forEach((task) => {
+    const status = taskDisplayStatus(task);
+    if (status === "overdue") counts.Overdue += 1;
+    else if (status === "in_progress" || status === "at_risk" || status === "due_today") counts["In Progress"] += 1;
+    else if (["completed", "checked"].includes(status)) counts.Completed += 1;
+    else if (status !== "cancelled") counts.Open += 1;
+  });
+  return Object.entries(counts).map(([label, value]) => ({ label, value }));
+}
+
+function dashboardCompletionTrend() {
+  const completed = state.generatedTasks
+    .filter((task) => ["completed", "checked"].includes(task.task_status))
+    .map((task) => task.completed_at || task.checked_at || task.updated_at || task.task_date || task.created_at)
+    .filter(Boolean)
+    .map((value) => dateKey(value))
+    .filter(Boolean)
+    .sort();
+
+  const counts = completed.reduce((summary, dateValue) => {
+    summary[dateValue] = (summary[dateValue] || 0) + 1;
+    return summary;
+  }, {});
+
+  return Object.entries(counts).slice(-12).map(([label, value]) => ({ label: formatShortDate(label), value }));
+}
+
+function attendanceStatusCounts() {
+  const counts = { Present: 0, Late: 0, Absent: 0, "On Leave": 0 };
+  state.attendanceRecords.forEach((record) => {
+    const status = String(record.status || "present").toLowerCase();
+    if (status === "late") counts.Late += 1;
+    else if (status === "absent") counts.Absent += 1;
+    else if (status === "on_leave") counts["On Leave"] += 1;
+    else counts.Present += 1;
+  });
+  return Object.entries(counts).map(([label, value]) => ({ label, value }));
+}
+
+function sopStatusCounts() {
+  const counts = { Active: 0, "Pending Review": 0, Draft: 0, Archived: 0 };
+  state.standardOperatingProcedures.forEach((sop) => {
+    const status = String(sop.status || "draft").toLowerCase();
+    if (status === "active") counts.Active += 1;
+    else if (["pending_review", "under_review", "review"].includes(status)) counts["Pending Review"] += 1;
+    else if (status === "archived") counts.Archived += 1;
+    else counts.Draft += 1;
+  });
+  return Object.entries(counts).map(([label, value]) => ({ label, value }));
+}
+
+function renderBarChart(data) {
+  const maxValue = Math.max(...data.map((item) => item.value), 0);
+  if (!maxValue) return chartEmptyState();
+
+  return `
+    <div class="bar-chart" role="img" aria-label="${escapeAttribute(data.map((item) => `${item.label}: ${item.value}`).join(", "))}">
+      ${data.map((item) => {
+        const height = Math.max(8, Math.round((item.value / maxValue) * 100));
+        return `
+          <div class="bar-chart-item">
+            <div class="bar-chart-track"><span style="height:${height}%"></span></div>
+            <strong>${escapeHtml(item.value)}</strong>
+            <small>${escapeHtml(item.label)}</small>
+          </div>
+        `;
+      }).join("")}
+    </div>
+    ${chartLegend(data)}
+  `;
+}
+
+function renderDonutChart(data) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  if (!total) return chartEmptyState();
+
+  let cumulative = 0;
+  const segments = data.map((item, index) => {
+    const dash = (item.value / total) * 100;
+    const markup = `<circle class="donut-segment chart-color-${index % 5}" cx="50" cy="50" r="36" pathLength="100" stroke-dasharray="${dash} ${100 - dash}" stroke-dashoffset="${-cumulative}"></circle>`;
+    cumulative += dash;
+    return markup;
+  }).join("");
+
+  return `
+    <div class="donut-chart-wrap">
+      <svg class="donut-chart" viewBox="0 0 100 100" role="img" aria-label="${escapeAttribute(data.map((item) => `${item.label}: ${item.value}`).join(", "))}">
+        <circle class="donut-bg" cx="50" cy="50" r="36"></circle>
+        ${segments}
+        <text x="50" y="49" text-anchor="middle">${total}</text>
+        <text x="50" y="61" text-anchor="middle">total</text>
+      </svg>
+      ${chartLegend(data)}
+    </div>
+  `;
+}
+
+function renderLineChart(data) {
+  if (!data.length) return chartEmptyState();
+  const maxValue = Math.max(...data.map((item) => item.value), 1);
+  const width = 300;
+  const height = 150;
+  const points = data.map((item, index) => {
+    const x = data.length === 1 ? width / 2 : (index / (data.length - 1)) * width;
+    const y = height - ((item.value / maxValue) * (height - 28)) - 14;
+    return { ...item, x, y };
+  });
+
+  return `
+    <div class="line-chart-wrap">
+      <svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttribute(data.map((item) => `${item.label}: ${item.value}`).join(", "))}">
+        <polyline points="${points.map((point) => `${point.x},${point.y}`).join(" ")}"></polyline>
+        ${points.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="4"><title>${escapeHtml(point.label)}: ${escapeHtml(point.value)}</title></circle>`).join("")}
+      </svg>
+      <div class="line-chart-labels">
+        <span>${escapeHtml(points[0]?.label || "")}</span>
+        <span>${escapeHtml(points.at(-1)?.label || "")}</span>
+      </div>
+    </div>
+  `;
+}
+
+function chartLegend(data) {
+  return `
+    <div class="chart-legend">
+      ${data.map((item, index) => `
+        <span><i class="chart-color-${index % 5}"></i>${escapeHtml(item.label)} <strong>${escapeHtml(item.value)}</strong></span>
+      `).join("")}
+    </div>
+  `;
+}
+
+function chartEmptyState() {
+  return '<div class="chart-empty">No records yet</div>';
+}
+
+function chartErrorState(message) {
+  return `<div class="chart-empty chart-error">${escapeHtml(message)}</div>`;
 }
 
 function renderMonitoringModules() {
-  const container = $("#monitoringModulesList");
+  const container = elements.activeWorkspacesList || $("#activeWorkspacesList");
   if (!container) return;
   renderDashboardProductLineFilter();
   const selectedProductLine = elements.dashboardProductLineFilter?.value || "";
-  const visibleModules = activeMonitoringTemplates()
-    .filter(() => permissionValue("planning", "view", true))
+  const visibleModules = activeWorkspaceTemplates(selectedProductLine)
     .map((template) => buildMonitoringModuleMetrics(template, selectedProductLine));
 
   container.innerHTML = visibleModules.length
     ? visibleModules.map(renderMonitoringModuleCard).join("")
-    : '<div class="empty-state"><p>No workflow modules available for your role.</p></div>';
+    : '<div class="empty-state"><p>No active workspaces found. Create a Workspace first, then add Workspace Tasks inside it.</p></div>';
+}
+
+function renderWorkspaceTasksDashboard() {
+  if (!elements.workspaceTasksDashboard) return;
+  const today = toDateInputValue(new Date());
+  const openTasks = state.generatedTasks.filter((task) => !["completed", "checked", "cancelled"].includes(task.task_status));
+  const dueToday = openTasks.filter((task) => task.task_date === today);
+  const overdue = openTasks.filter((task) => taskDisplayStatus(task) === "overdue");
+  const atRisk = openTasks.filter((task) => taskDisplayStatus(task) === "at_risk");
+  const recentTasks = [...state.generatedTasks]
+    .sort((a, b) => new Date(b.updated_at || b.created_at || b.task_date) - new Date(a.updated_at || a.created_at || a.task_date))
+    .slice(0, 5);
+
+  elements.workspaceTasksDashboard.innerHTML = `
+    <div class="summary-grid mini task-metric-grid">
+      <article class="summary-card"><span>Open Tasks</span><strong>${openTasks.length}</strong></article>
+      <article class="summary-card"><span>Due Today</span><strong>${dueToday.length}</strong></article>
+      <article class="summary-card alert"><span>Overdue</span><strong>${overdue.length}</strong></article>
+      <article class="summary-card"><span>At Risk</span><strong>${atRisk.length}</strong></article>
+    </div>
+    <div class="table-wrap compact-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Workspace</th>
+            <th>Status</th>
+            <th>Due</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${renderRows(recentTasks, (task) => `
+            <tr>
+              <td><strong>${escapeHtml(task.task_title)}</strong></td>
+              <td>${productLineName(taskWorkspaceId(task))}</td>
+              <td><span class="status-pill ${statusPillClass(taskDisplayStatus(task))}">${formattedRoleLabel(taskDisplayStatus(task))}</span></td>
+              <td>${formatDate(task.task_date)} ${escapeHtml(task.due_time || "")}</td>
+            </tr>
+          `, 4, "No workspace tasks found.")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderSopDashboardSection() {
+  if (!elements.sopDashboardCards || !elements.recentSopsDashboardTable) return;
+  const sops = canViewSops() ? state.standardOperatingProcedures : [];
+  const active = sops.filter((sop) => sop.status === "active").length;
+  const pendingReview = sops.filter((sop) => ["pending_review", "under_review"].includes(sop.status)).length;
+  const updateThreshold = startOfDay(new Date());
+  updateThreshold.setDate(updateThreshold.getDate() - 30);
+  const recentlyUpdated = sops.filter((sop) => {
+    const updatedAt = sop.updated_at || sop.last_updated_at || sop.created_at;
+    if (!updatedAt) return false;
+    const updatedDate = new Date(updatedAt);
+    updatedDate.setHours(0, 0, 0, 0);
+    return !Number.isNaN(updatedDate.getTime()) && updatedDate >= updateThreshold;
+  }).length;
+  const latest = [...sops]
+    .sort((a, b) => new Date(b.updated_at || b.last_updated_at || b.created_at || 0) - new Date(a.updated_at || a.last_updated_at || a.created_at || 0))
+    .slice(0, 4);
+
+  elements.sopDashboardCards.innerHTML = [
+    ["Total SOPs", sops.length],
+    ["Active SOPs", active],
+    ["Pending Review", pendingReview],
+    ["Recently Updated", recentlyUpdated]
+  ].map(([label, value]) => `<article class="summary-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+
+  elements.recentSopsDashboardTable.innerHTML = renderRows(latest, (sop) => `
+    <tr>
+      <td><strong>${escapeHtml(sop.title || sop.sop_title || "Untitled SOP")}</strong></td>
+      <td><span class="status-pill ${["pending_review", "under_review"].includes(sop.status) ? "warning" : sop.status === "archived" ? "danger" : ""}">${formattedRoleLabel(sop.status || "draft")}</span></td>
+      <td>${formatDate(sop.updated_at || sop.last_updated_at || sop.created_at)}</td>
+    </tr>
+  `, 3, canViewSops() ? "No SOP records found." : "You do not have access to SOP records.");
+}
+
+function workspaceDashboardDebug() {
+  return {
+    productLines: state.productLines.map((item) => ({
+      id: item.id,
+      product_name: item.product_name,
+      status: item.status
+    })),
+    scheduleTemplates: state.scheduleTemplates.map((item) => ({
+      id: item.id,
+      template_title: item.template_title,
+      product_line_id: item.product_line_id,
+      status: item.status
+    })),
+    generatedTasks: state.generatedTasks.map((item) => ({
+      id: item.id,
+      task_title: item.task_title,
+      product_line_id: item.product_line_id,
+      workspace_id: item.workspace_id,
+      task_status: item.task_status
+    })),
+    dashboardTemplates: activeWorkspaceTemplates().map((item) => ({
+      id: item.id,
+      category: item.category,
+      product_line_id: item.product_line_id || null,
+      sop_module: Boolean(item.sop_module)
+    }))
+  };
 }
 
 function renderDashboardProductLineFilter() {
   if (!elements.dashboardProductLineFilter) return;
   const selectedValue = elements.dashboardProductLineFilter.value;
   elements.dashboardProductLineFilter.innerHTML = `
-    <option value="">All scopes</option>
+    <option value="">All workspaces</option>
     ${state.productLines.map((line) => `
       <option value="${escapeAttribute(line.id)}" ${line.id === selectedValue ? "selected" : ""}>${escapeHtml(line.product_name)}</option>
     `).join("")}
@@ -980,11 +1455,18 @@ function renderDashboardProductLineFilter() {
 }
 
 function buildMonitoringModuleMetrics(template, productLineId = "") {
-  const moduleTemplates = state.scheduleTemplates.filter((schedule) => monitoringTemplateMatches(template, schedule));
+  if (template.sop_module) return buildSopWorkspaceMetrics(template);
+  const moduleTemplates = template.schedule_id
+    ? state.scheduleTemplates.filter((schedule) => schedule.id === template.schedule_id)
+    : template.product_line_id
+      ? state.scheduleTemplates.filter((schedule) => schedule.product_line_id === template.product_line_id)
+    : state.scheduleTemplates.filter((schedule) => monitoringTemplateMatches(template, schedule));
   const templateIds = new Set(moduleTemplates.map((schedule) => schedule.id));
   const moduleTasks = state.generatedTasks.filter((task) => {
-    const matchesTemplate = templateIds.has(task.template_id) || monitoringTextMatches(template, `${task.task_title} ${categoryNameRaw(task.category_id)}`);
-    const matchesProductLine = !productLineId || task.product_line_id === productLineId;
+    const matchesTemplate = templateIds.has(task.template_id)
+      || (template.product_line_id && taskWorkspaceId(task) === template.product_line_id)
+      || (!template.schedule_id && !template.product_line_id && monitoringTextMatches(template, `${task.task_title} ${categoryNameRaw(task.category_id)}`));
+    const matchesProductLine = !productLineId || taskWorkspaceId(task) === productLineId;
     return matchesTemplate && matchesProductLine;
   });
   const taskIds = new Set(moduleTasks.map((task) => task.id));
@@ -1004,7 +1486,8 @@ function buildMonitoringModuleMetrics(template, productLineId = "") {
     .sort(compareTaskSchedule)[0];
   const assignedPeople = uniquePeople(moduleTasks.map((task) => task.assigned_person_id).filter(Boolean));
   const supervisor = latestActivity?.checked_by || moduleTemplates.find((item) => item.approved_by)?.approved_by || "";
-  const productLines = uniqueLabels(moduleTasks.map((task) => productLineNameRaw(task.product_line_id)).filter(Boolean));
+  const productLines = uniqueLabels(moduleTasks.map((task) => productLineNameRaw(taskWorkspaceId(task))).filter(Boolean));
+  const workspaceLabels = productLines.length ? productLines : template.product_line_name ? [template.product_line_name] : [];
   const status = monitoringModuleStatus({ failed, overdue, atRisk, pending, compliance, moduleTemplates });
 
   return {
@@ -1023,16 +1506,62 @@ function buildMonitoringModuleMetrics(template, productLineId = "") {
     latestActivity,
     assignedPeople,
     supervisor,
-    productLines,
+    productLines: workspaceLabels,
     status,
     monthly: monthlyModuleSummary(moduleTasks, checks),
     specific: moduleSpecificMetrics(template, moduleTasks, checks, cases)
   };
 }
 
+function buildSopWorkspaceMetrics(template) {
+  const sops = state.standardOperatingProcedures || [];
+  const active = sops.filter((sop) => sop.status === "active").length;
+  const underReview = sops.filter((sop) => sop.status === "under_review").length;
+  const upcomingReview = sops
+    .filter((sop) => sop.review_date)
+    .sort((a, b) => startOfDay(a.review_date) - startOfDay(b.review_date))[0];
+  const ownerIds = uniqueLabels(sops.map((sop) => sop.owner_person_id).filter(Boolean));
+  const compliance = sops.length ? Math.round((active / sops.length) * 100) : 0;
+  const status = underReview
+    ? { key: "due_soon", label: "Under Review" }
+    : active
+      ? { key: "compliant", label: "Active" }
+      : { key: "info", label: "No SOPs" };
+  return {
+    template,
+    moduleTemplates: [],
+    tasks: [],
+    checks: [],
+    cases: [],
+    completed: active,
+    total: sops.length,
+    failed: 0,
+    overdue: 0,
+    pending: underReview,
+    compliance,
+    nextTask: upcomingReview ? {
+      task_status: "scheduled",
+      due_time: "Review",
+      task_date: upcomingReview.review_date
+    } : null,
+    latestActivity: null,
+    assignedPeople: uniquePeople(ownerIds),
+    supervisor: "",
+    productLines: ["SOP Library"],
+    status,
+    monthly: { total: sops.length, passed: active, failed: 0, rate: compliance },
+    specific: []
+  };
+}
+
 function renderMonitoringModuleCard(module) {
   const statusClass = statusClassName(module.status.key);
-  const primaryKpi = `${module.compliance}% Workflow Completion`;
+  const workspaceId = module.template.product_line_id || "";
+  const canEditWorkspace = workspaceId && state.productLines.some((workspace) => workspace.id === workspaceId) && canManagePlans();
+  const canDeleteWorkspace = workspaceId && state.productLines.some((workspace) => workspace.id === workspaceId) && canDeleteRecords();
+  const primaryKpi = module.template.sop_module
+    ? `${module.completed} Active SOP${module.completed === 1 ? "" : "s"}`
+    : `${module.compliance}% Workflow Completion`;
   const nextAction = module.nextTask
     ? `${escapeHtml(module.nextTask.due_time || "Any time")} · ${formatDate(module.nextTask.task_date)}`
     : "No upcoming task";
@@ -1067,7 +1596,9 @@ function renderMonitoringModuleCard(module) {
       </div>
 
       <div class="module-actions">
-        <button type="button" onclick="openWorkspace('${escapeAttribute(module.template.id)}')">Open Workspace -&gt;</button>
+        <button type="button" onclick="${module.template.sop_module ? "openSopWorkspace()" : `openWorkspace('${escapeAttribute(module.template.id)}')`}">Open Workspace -&gt;</button>
+        ${canEditWorkspace ? `<button type="button" onclick="openProductLineModal('${escapeAttribute(workspaceId)}')">Edit</button>` : ""}
+        ${canDeleteWorkspace ? `<button class="delete-action" type="button" onclick="deleteWorkspace('${escapeAttribute(workspaceId)}')">Delete</button>` : ""}
       </div>
     </article>
   `;
@@ -1109,6 +1640,7 @@ function statusClassName(statusKey) {
 
 function moduleIcon(templateId) {
   const icons = {
+    "sop-library": "SOP",
     "preventive-maintenance": "🔧",
     "temperature-monitoring": "°C",
     "raw-meat-receiving": "RCV",
@@ -1214,13 +1746,13 @@ function moduleSpecificMetrics(template, tasks, checks, cases) {
     return [
       { label: "Receiving Checks", value: String(tasks.length) },
       { label: "Failed Lots", value: String(failed) },
-      { label: "Scopes", value: uniqueLabels(tasks.map((task) => productLineNameRaw(task.product_line_id)).filter(Boolean)).join(", ") || "Not set" }
+      { label: "Workspaces", value: uniqueLabels(tasks.map((task) => productLineNameRaw(taskWorkspaceId(task))).filter(Boolean)).join(", ") || "Not set" }
     ];
   }
   return [
     { label: "Operations Checks", value: String(tasks.length) },
     { label: "Failed Checks", value: String(failed) },
-    { label: "Scopes", value: uniqueLabels(tasks.map((task) => productLineNameRaw(task.product_line_id)).filter(Boolean)).join(", ") || "Not set" }
+    { label: "Workspaces", value: uniqueLabels(tasks.map((task) => productLineNameRaw(taskWorkspaceId(task))).filter(Boolean)).join(", ") || "Not set" }
   ];
 }
 
@@ -1716,6 +2248,7 @@ function renderHrDashboardCards(people, canViewAll) {
   const expiring = expiringPeopleRequirementCount(allPeople);
   const departments = uniqueLabels(allPeople.map((person) => person.department).filter(Boolean)).length;
   const participation = employeeWorkflowParticipationRate(allPeople);
+  const attendanceToday = attendanceForDate(toDateInputValue(new Date()), allPeople.map((person) => person.id));
   elements.hrDashboardCards.innerHTML = [
     ["Total Employees", allPeople.length],
     ["Active Employees", active],
@@ -1723,9 +2256,23 @@ function renderHrDashboardCards(people, canViewAll) {
     ["Expiring Requirements", expiring],
     ["Missing Documents", missingDocs],
     ["Departments", departments],
-    ["Attendance Summary", "Ready"],
+    ["Present Today", attendanceToday.present],
+    ["Late Today", attendanceToday.late],
+    ["Absent Today", attendanceToday.absent],
+    ["On Leave Today", attendanceToday.on_leave],
     ["Workflow Participation", `${participation}%`]
   ].map(([label, value]) => `<article class="summary-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+}
+
+function attendanceForDate(dateValue, personIds = []) {
+  const allowedPeople = personIds.length ? new Set(personIds) : null;
+  return state.attendanceRecords
+    .filter((record) => record.attendance_date === dateValue && (!allowedPeople || allowedPeople.has(record.person_id)))
+    .reduce((summary, record) => {
+      const status = record.status || "present";
+      summary[status] = (summary[status] || 0) + 1;
+      return summary;
+    }, { present: 0, late: 0, absent: 0, on_leave: 0 });
 }
 
 function renderEmployeeCard(person, canManage) {
@@ -1798,6 +2345,66 @@ function renderEmployeeProfilePanel(person, canManage) {
       <section><h5>Activity Logs</h5>${renderEmployeeTimeline(person)}</section>
     </div>
   `;
+}
+
+function renderAttendance() {
+  if (!elements.attendanceTable) return;
+  const canManage = canManagePersonnel();
+  const canViewAll = canViewHRModule();
+  const currentUserId = state.session?.user?.id;
+  const visiblePeople = canViewAll
+    ? state.peopleProfiles
+    : state.peopleProfiles.filter((person) => person.user_id === currentUserId || String(person.email || "").toLowerCase() === String(state.session?.user?.email || "").toLowerCase());
+  const visiblePersonIds = new Set(visiblePeople.map((person) => person.id));
+
+  updateAttendanceFilters(visiblePeople);
+
+  const dateFilter = elements.attendanceDateFilter?.value || "";
+  const employeeFilter = elements.attendanceEmployeeFilter?.value || "";
+  const statusFilter = elements.attendanceStatusFilter?.value || "";
+  const records = state.attendanceRecords
+    .filter((record) => visiblePersonIds.has(record.person_id))
+    .filter((record) => !dateFilter || record.attendance_date === dateFilter)
+    .filter((record) => !employeeFilter || record.person_id === employeeFilter)
+    .filter((record) => !statusFilter || record.status === statusFilter)
+    .sort((a, b) => new Date(`${b.attendance_date || "1900-01-01"}T${b.time_in || "00:00"}`) - new Date(`${a.attendance_date || "1900-01-01"}T${a.time_in || "00:00"}`));
+
+  elements.attendanceTable.innerHTML = renderRows(records, (record) => {
+    const person = state.peopleProfiles.find((item) => item.id === record.person_id);
+    return `
+      <tr>
+        <td><strong>${peopleName(record.person_id)}</strong></td>
+        <td>${escapeHtml(person?.employee_id || "N/A")}</td>
+        <td>${formatDate(record.attendance_date)}</td>
+        <td>${escapeHtml(formatTime(record.time_in))}</td>
+        <td>${escapeHtml(formatTime(record.time_out))}</td>
+        <td><span class="status-pill ${attendanceStatusClass(record.status)}">${formattedRoleLabel(record.status)}</span></td>
+        <td>${escapeHtml(record.notes || "")}</td>
+        <td class="actions-cell">${canManage ? `<div class="table-actions"><button type="button" onclick="openAttendanceModal('${escapeAttribute(record.id)}')">Edit</button></div>` : '<span class="muted-action">View only</span>'}</td>
+      </tr>
+    `;
+  }, 8, "No attendance records found.");
+}
+
+function updateAttendanceFilters(people) {
+  if (!elements.attendanceEmployeeFilter) return;
+  const selected = elements.attendanceEmployeeFilter.value;
+  elements.attendanceEmployeeFilter.innerHTML = `
+    <option value="">All employees</option>
+    ${people.map((person) => `<option value="${escapeAttribute(person.id)}" ${person.id === selected ? "selected" : ""}>${escapeHtml(person.complete_name || "Unnamed employee")}</option>`).join("")}
+  `;
+}
+
+function attendanceStatusClass(status) {
+  if (status === "present") return "success";
+  if (status === "late" || status === "on_leave") return "warning";
+  if (status === "absent") return "danger";
+  return "";
+}
+
+function formatTime(value) {
+  if (!value) return "N/A";
+  return String(value).slice(0, 5);
 }
 
 function selectPeopleProfile(id) {
@@ -1949,6 +2556,31 @@ function equipmentMaintenanceSummary(equipmentId) {
   return `${records.length} record${records.length === 1 ? "" : "s"} | Next: ${formatDate(latest.next_due_date)}`;
 }
 
+function renderSops() {
+  if (!elements.sopTable) return;
+  const canManage = canManageSops();
+  const visibleSops = canViewSops() ? state.standardOperatingProcedures : [];
+  elements.sopTable.innerHTML = renderRows(
+    visibleSops,
+    (sop) => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(sop.title)}</strong>
+          <span class="muted-action">${escapeHtml(sop.sop_code || "No code")} | ${escapeHtml(sop.category || "General")}</span>
+        </td>
+        <td>${escapeHtml(sop.department || "All departments")}</td>
+        <td>${peopleName(sop.owner_person_id)}</td>
+        <td>${escapeHtml(sop.version || "1.0")}</td>
+        <td><span class="status-pill ${sop.status === "archived" ? "danger" : sop.status === "under_review" ? "warning" : ""}">${formattedRoleLabel(sop.status || "draft")}</span></td>
+        <td>${formatDate(sop.review_date)}</td>
+        <td class="actions-cell">${canManage ? `<div class="table-actions"><button type="button" onclick="openSopModal('${escapeAttribute(sop.id)}')">Edit</button></div>` : '<span class="muted-action">View only</span>'}</td>
+      </tr>
+    `,
+    7,
+    canViewSops() ? "No SOP records found." : "You do not have access to SOP records."
+  );
+}
+
 function renderMonitoringPlans() {
   if (!elements.scheduleTemplatesTable) return;
   elements.scheduleTemplatesTable.innerHTML = renderRows(
@@ -1990,8 +2622,13 @@ function renderMonitoringPlans() {
         </div>
       </div>
       <div class="setup-group">
-        <h4>Scopes</h4>
-        ${state.productLines.length ? state.productLines.map((item) => `<button type="button" ${canManagePlans() ? `onclick="openProductLineModal('${item.id}')"` : "disabled"}>${escapeHtml(item.product_name)}</button>`).join("") : "<p>No scopes yet.</p>"}
+        <h4>Workspaces</h4>
+        ${state.productLines.length ? state.productLines.map((item) => `
+          <div class="table-actions">
+            <button type="button" ${canManagePlans() ? `onclick="openProductLineModal('${item.id}')"` : "disabled"}>${escapeHtml(item.product_name)}</button>
+            ${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteWorkspace('${item.id}')">Delete</button>` : ""}
+          </div>
+        `).join("") : "<p>No workspaces yet.</p>"}
       </div>
       <div class="setup-group">
         <h4>Workflow Groups</h4>
@@ -2014,24 +2651,30 @@ function renderMonitoringPlans() {
 
 function renderTaskBoard() {
   if (!elements.generatedTasksTable) return;
+  renderTaskWorkspaceFilter();
+  const selectedWorkspaceId = elements.taskWorkspaceFilter?.value || "";
+  const visibleTasks = state.generatedTasks.filter((task) => !selectedWorkspaceId || taskWorkspaceId(task) === selectedWorkspaceId);
+  const visibleTaskIds = new Set(visibleTasks.map((task) => task.id));
   const today = toDateInputValue(new Date());
-  $("#newDueToday").textContent = state.generatedTasks.filter((task) => task.task_date === today).length;
-  $("#newOverdue").textContent = state.generatedTasks.filter((task) => task.task_date < today && !["completed", "checked", "cancelled"].includes(task.task_status)).length;
-  $("#newCompleted").textContent = state.generatedTasks.filter((task) => ["completed", "checked"].includes(task.task_status)).length;
-  $("#newOpenCases").textContent = state.actionCases.filter((item) => !["verified", "closed"].includes(item.case_status)).length;
+  $("#newDueToday").textContent = visibleTasks.filter((task) => task.task_date === today).length;
+  $("#newOverdue").textContent = visibleTasks.filter((task) => task.task_date < today && !["completed", "checked", "cancelled"].includes(task.task_status)).length;
+  $("#newCompleted").textContent = visibleTasks.filter((task) => ["completed", "checked"].includes(task.task_status)).length;
+  $("#newOpenCases").textContent = state.actionCases.filter((item) => visibleTaskIds.has(item.task_id) && !["verified", "closed"].includes(item.case_status)).length;
 
   elements.generatedTasksTable.innerHTML = renderRows(
-    state.generatedTasks,
+    visibleTasks,
     (task) => {
       const displayStatus = taskDisplayStatus(task);
       const actions = [
         canManagePlans() ? `<button type="button" onclick="openGeneratedTaskModal('${task.id}')">Edit</button>` : "",
+        canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteGeneratedTask('${task.id}')">Delete</button>` : "",
         canDoTasks() ? `<button type="button" onclick="openTaskDoModal('${task.id}')">Do</button>` : "",
         canCheckTasks() ? `<button type="button" onclick="openTaskCheckModal('${task.id}')">Check</button>` : ""
       ].filter(Boolean).join("");
       return `
         <tr>
           <td><strong>${escapeHtml(task.task_title)}</strong></td>
+          <td>${productLineName(taskWorkspaceId(task))}</td>
           <td>${formatDate(task.task_date)}</td>
           <td>${escapeHtml(task.due_time || "Any time")}</td>
           <td>${peopleName(task.assigned_person_id)}</td>
@@ -2040,9 +2683,20 @@ function renderTaskBoard() {
         </tr>
       `;
     },
-    6,
-    "No generated tasks yet."
+    7,
+    selectedWorkspaceId ? "No workspace tasks found for this workspace." : "No workspace tasks yet."
   );
+}
+
+function renderTaskWorkspaceFilter() {
+  if (!elements.taskWorkspaceFilter) return;
+  const selectedValue = elements.taskWorkspaceFilter.value;
+  elements.taskWorkspaceFilter.innerHTML = `
+    <option value="">All workspace tasks</option>
+    ${state.productLines.map((line) => `
+      <option value="${escapeAttribute(line.id)}" ${line.id === selectedValue ? "selected" : ""}>${escapeHtml(line.product_name)}</option>
+    `).join("")}
+  `;
 }
 
 function renderActionCenter() {
@@ -2083,6 +2737,23 @@ function exportPersonnelCsv() {
     "Created At": formatDateTime(person.created_at)
   }));
   downloadCsv("personnel-records", rows);
+}
+
+function exportSopCsv() {
+  const rows = state.standardOperatingProcedures.map((sop) => ({
+    Code: sop.sop_code,
+    Title: sop.title,
+    Department: sop.department,
+    Category: sop.category,
+    Version: sop.version,
+    Status: formattedRoleLabel(sop.status),
+    "Effective Date": sop.effective_date,
+    "Review Date": sop.review_date,
+    Owner: peopleNameRaw(sop.owner_person_id),
+    "Approved By": peopleNameRaw(sop.approved_by),
+    Summary: sop.summary
+  }));
+  downloadCsv("standard-operating-procedures", rows);
 }
 
 function exportPlansCsv() {
@@ -2177,6 +2848,20 @@ function printPersonnelReport() {
     formatDateTime(person.created_at)
   ]);
   printReport("Personnel Management", ["Full Name", "Position", "Role", "Created At"], rows);
+}
+
+function printSopReport() {
+  const rows = state.standardOperatingProcedures.map((sop) => [
+    sop.sop_code,
+    sop.title,
+    sop.department || "All departments",
+    sop.category || "General",
+    sop.version || "1.0",
+    formattedRoleLabel(sop.status || "draft"),
+    formatDate(sop.review_date),
+    peopleNameRaw(sop.owner_person_id)
+  ]);
+  printReport("Standard Operating Procedures", ["Code", "Title", "Department", "Category", "Version", "Status", "Review Date", "Owner"], rows);
 }
 
 function printPlansReport() {
@@ -2370,6 +3055,7 @@ function switchView(viewId) {
     settingsView: "Company Settings",
     peopleProfilesView: "People / HR",
     equipmentView: "Equipment",
+    sopView: "Standard Operating Procedure",
     notificationsView: "Notifications",
     monitoringPlansView: "Workflow Modules",
     taskBoardView: "Workspace Tasks",
@@ -2738,19 +3424,33 @@ function openEquipmentModal(id = null) {
 
 function openProductLineModal(id = null) {
   if (!canManagePlans()) {
-    showToast("Only authorized planning roles can manage scopes.", "error");
+    showToast("Only authorized planning roles can manage workspaces.", "error");
     return;
   }
   const item = id ? state.productLines.find((record) => record.id === id) : {};
+  const fields = [
+    inputField("product_name", "Workspace Name", "text", item?.product_name, true),
+    textareaField("description", "Description", item?.description, false),
+    selectField("status", "Status", workspaceStatusOptions(), item?.status || "active", true)
+  ];
+
+  if (tableHasColumn(state.productLines, "pdca_stage")) {
+    fields.push(selectField("pdca_stage", "PDCA Stage", pdcaStageOptions(), item?.pdca_stage || "plan", false));
+  }
+
+  if (tableHasColumn(state.productLines, "assigned_person_id")) {
+    fields.push(selectField("assigned_person_id", "Assigned Member", peopleOptions(), item?.assigned_person_id, false));
+  }
+
+  if (tableHasColumn(state.productLines, "target_date")) {
+    fields.push(inputField("target_date", "Target Date", "date", item?.target_date, false));
+  }
+
   openModal({
-    title: id ? "Edit Scope" : "Add Scope",
+    title: id ? "Edit Workspace" : "Create Workspace",
     mode: "product_lines",
     editingId: id,
-    fields: [
-      inputField("product_name", "Scope Name", "text", item?.product_name, true),
-      textareaField("description", "Description", item?.description, false),
-      selectField("status", "Status", [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }], item?.status || "active", true)
-    ]
+    fields
   });
 }
 
@@ -2786,6 +3486,67 @@ function openMaintenanceModal(id = null, equipmentId = "") {
       ], item?.status || "completed", true)
     ]
   });
+}
+
+function openSopModal(id = null) {
+  if (!canManageSops()) {
+    showToast("Your role cannot manage SOP records.", "error");
+    return;
+  }
+  const sop = id ? state.standardOperatingProcedures.find((record) => record.id === id) : {};
+  openModal({
+    title: id ? "Edit SOP" : "Create SOP",
+    mode: "standard_operating_procedures",
+    editingId: id,
+    fields: [
+      inputField("sop_code", "SOP Code", "text", sop?.sop_code, true, { placeholder: "SOP-OPS-001" }),
+      inputField("title", "Title", "text", sop?.title, true),
+      inputField("department", "Department", "text", sop?.department, false),
+      inputField("category", "Category", "text", sop?.category, false),
+      inputField("version", "Version", "text", sop?.version || "1.0", true),
+      selectField("status", "Status", sopStatusOptions(), sop?.status || "draft", true),
+      inputField("effective_date", "Effective Date", "date", sop?.effective_date, false),
+      inputField("review_date", "Review Date", "date", sop?.review_date, false),
+      selectField("owner_person_id", "Owner", peopleOptions(), sop?.owner_person_id, false),
+      selectField("approved_by", "Approved By", peopleOptions(), sop?.approved_by, false),
+      textareaField("summary", "Summary", sop?.summary, false),
+      textareaField("scope", "SOP Scope", sop?.scope, false),
+      textareaField("procedure_body", "Procedure", sop?.procedure_body, false),
+      textareaField("responsibilities", "Responsibilities", sop?.responsibilities, false),
+      textareaField("required_forms", "Required Forms", sop?.required_forms, false),
+      checkboxField("attachments_required", "Attachments required", sop?.attachments_required)
+    ]
+  });
+}
+
+function openAttendanceModal(id = null) {
+  if (!canManagePersonnel()) {
+    showToast("Only HR or authorized managers can manage attendance.", "error");
+    return;
+  }
+  const item = id ? state.attendanceRecords.find((record) => record.id === id) : {};
+  openModal({
+    title: id ? "Edit Attendance Record" : "Add Attendance Record",
+    mode: "attendance",
+    editingId: id,
+    fields: [
+      selectField("person_id", "Employee", peopleOptions(), item?.person_id, true),
+      inputField("attendance_date", "Date", "date", item?.attendance_date || toDateInputValue(new Date()), true),
+      inputField("time_in", "Time In", "time", item?.time_in, false),
+      inputField("time_out", "Time Out", "time", item?.time_out, false),
+      selectField("status", "Status", attendanceStatusOptions(), item?.status || "present", true),
+      textareaField("notes", "Notes / Remarks", item?.notes, false)
+    ]
+  });
+}
+
+function attendanceStatusOptions() {
+  return [
+    { value: "present", label: "Present" },
+    { value: "late", label: "Late" },
+    { value: "absent", label: "Absent" },
+    { value: "on_leave", label: "On Leave" }
+  ];
 }
 
 function openMonitoringCategoryModal(id = null) {
@@ -2889,7 +3650,7 @@ function openScheduleTemplateModal(id = null) {
     fields: [
       inputField("template_title", "Workflow Name", "text", item?.template_title, true),
       selectField("category_id", "Workflow Group", categoryOptions(), item?.category_id, false),
-      selectField("product_line_id", "Scope", productLineOptions(), item?.product_line_id, false),
+      selectField("product_line_id", "Workspace", productLineOptions(), item?.product_line_id, false),
       selectField("equipment_id", "Equipment", equipmentOptions(), item?.equipment_id, false),
       textareaField("objective", "Objective", item?.objective, false),
       textareaField("target_standard", "Target Standard", item?.target_standard, false),
@@ -2928,16 +3689,18 @@ function openGeneratedTaskModal(id = null, templateId = "") {
   }
   const item = id ? state.generatedTasks.find((record) => record.id === id) : {};
   const template = state.scheduleTemplates.find((record) => record.id === (templateId || item?.template_id));
+  const selectedWorkspaceId = elements.taskWorkspaceFilter?.value || "";
   openModal({
-    title: id ? "Edit Task" : "Add Task",
+    title: id ? "Edit Workspace Task" : "Add Workspace Task",
     mode: "generated_tasks",
     editingId: id,
     fields: [
       selectField("template_id", "Workflow", scheduleTemplateOptions(), item?.template_id || templateId, false),
       hiddenField("category_id", item?.category_id || template?.category_id || ""),
-      hiddenField("product_line_id", item?.product_line_id || template?.product_line_id || ""),
+      selectField("product_line_id", "Workspace", productLineOptions(), taskWorkspaceId(item) || template?.product_line_id || selectedWorkspaceId, false),
       hiddenField("equipment_id", item?.equipment_id || template?.equipment_id || ""),
-      inputField("task_title", "Task Title", "text", item?.task_title || template?.template_title, true),
+      inputField("task_title", "Workspace Task Title", "text", item?.task_title || template?.template_title, true),
+      textareaField("remarks", "Description", item?.remarks, false),
       inputField("task_date", "Task Date", "date", item?.task_date || toDateInputValue(new Date()), true),
       inputField("due_time", "Due Time", "time", item?.due_time || template?.due_time, false),
       selectField("assigned_person_id", "Assigned To", peopleOptions(), item?.assigned_person_id, false),
@@ -2948,8 +3711,7 @@ function openGeneratedTaskModal(id = null, templateId = "") {
         { value: "normal", label: "Normal" },
         { value: "high", label: "High" },
         { value: "critical", label: "Critical" }
-      ], item?.priority || "normal", true),
-      textareaField("remarks", "Task / Notification Notes", item?.remarks, false)
+      ], item?.priority || "normal", true)
     ]
   });
 }
@@ -3102,6 +3864,14 @@ async function handleModalSubmit(event) {
     showToast("Only HR or managers can manage employee document records.", "error");
     return;
   }
+  if (state.modalMode === "attendance" && !canManagePersonnel()) {
+    showToast("Only HR or authorized managers can manage attendance.", "error");
+    return;
+  }
+  if (state.modalMode === "standard_operating_procedures" && !canManageSops()) {
+    showToast("Your role cannot manage SOP records.", "error");
+    return;
+  }
   if (state.modalMode === "company_settings" && !canManageCompanySettings()) {
     showToast("Only general managers can update company settings.", "error");
     return;
@@ -3143,11 +3913,11 @@ async function handleModalSubmit(event) {
     return;
   }
   if (![
-    "personnel", "user_profiles", "people_profiles", "change_password",
+    "personnel", "user_profiles", "people_profiles", "attendance", "change_password",
     "company_settings", "equipment", "equipment_maintenance_history", "product_lines", "monitoring_categories",
     "monitoring_schedule_templates", "monitoring_templates", "dynamic_checklists", "template_workflows", "generated_tasks", "task_do_records",
     "task_check_records", "action_cases", "plans", "plan_items", "do_records",
-    "check_records", "action_taken", "employee_documents"
+    "check_records", "action_taken", "employee_documents", "standard_operating_procedures"
   ].includes(state.modalMode) && !canManageRecords()) {
     showToast("Your account is view-only until an administrator assigns a role.", "error");
     return;
@@ -3167,7 +3937,7 @@ async function handleModalSubmit(event) {
   ["monthly_day", "at_risk_hours", "sort_order", "due_after_hours"].forEach((key) => {
     if (payload[key]) payload[key] = Number(payload[key]);
   });
-  ["auto_generate", "requires_approval", "manager_notified", "evidence_required", "checklist_enabled", "verification_required", "corrective_action_required", "is_active", "requires_evidence"].forEach((key) => {
+  ["auto_generate", "requires_approval", "manager_notified", "evidence_required", "checklist_enabled", "verification_required", "corrective_action_required", "is_active", "requires_evidence", "attachments_required"].forEach((key) => {
     if (key in payload) payload[key] = payload[key] === "true";
   });
   ["recurrence_days", "recurrence_times"].forEach((key) => {
@@ -3183,6 +3953,14 @@ async function handleModalSubmit(event) {
   if (validationMessage) {
     showToast(validationMessage, "error");
     return;
+  }
+
+  if (state.modalMode === "generated_tasks") {
+    payload.workspace_id = payload.product_line_id || null;
+  }
+
+  if (state.modalMode === "generated_tasks" || (state.modalMode === "product_lines" && tableHasColumn(state.productLines, "updated_at"))) {
+    payload.updated_at = new Date().toISOString();
   }
 
   setLoading(true);
@@ -3411,6 +4189,7 @@ async function generateTasksFromTemplate(template) {
     template_id: template.id,
     category_id: template.category_id || null,
     product_line_id: template.product_line_id || null,
+    workspace_id: template.product_line_id || null,
     equipment_id: template.equipment_id || null,
     task_title: template.template_title,
     task_date: dateValue,
@@ -3468,6 +4247,16 @@ function atRiskTimestamp(dateValue, timeValue, hoursBefore = 6) {
 }
 
 async function deleteRecord(table, id) {
+  if (table === "product_lines") {
+    await deleteWorkspace(id);
+    return;
+  }
+
+  if (table === "generated_tasks") {
+    await deleteGeneratedTask(id);
+    return;
+  }
+
   if (!canDeleteRecords()) {
     showToast("Only administrators can delete records.", "error");
     return;
@@ -3482,6 +4271,90 @@ async function deleteRecord(table, id) {
     if (error) throw error;
     await logAudit("delete", table, id);
     showToast("Record deleted.", "success");
+    await loadAllData();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function deleteWorkspace(workspaceId) {
+  if (!canDeleteRecords()) {
+    showToast("Only administrators can delete workspaces.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm("Deleting this workspace will also delete all tasks under it. This action cannot be undone.");
+  if (!confirmed) return;
+
+  setLoading(true);
+  try {
+    const { error } = await db.from("product_lines").delete().eq("id", workspaceId);
+    if (error) throw error;
+    await logAudit("delete", "product_lines", workspaceId);
+    showToast("Workspace deleted.", "success");
+    await loadAllData();
+  } catch (error) {
+    const message = String(error.message || "");
+    const canRetryWithManualChildDelete = /foreign key|constraint|violates|conflict/i.test(message);
+
+    if (!canRetryWithManualChildDelete) {
+      showToast(error.message, "error");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await deleteWorkspaceTasksForWorkspace(workspaceId);
+      const { error: workspaceDeleteError } = await db.from("product_lines").delete().eq("id", workspaceId);
+      if (workspaceDeleteError) throw workspaceDeleteError;
+      await logAudit("delete", "generated_tasks", workspaceId, { workspace_id: workspaceId, reason: "workspace_delete_child_cleanup" });
+      await logAudit("delete", "product_lines", workspaceId);
+      showToast("Workspace and its tasks deleted.", "success");
+      await loadAllData();
+    } catch (fallbackError) {
+      showToast(fallbackError.message, "error");
+    } finally {
+      setLoading(false);
+    }
+    return;
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function deleteWorkspaceTasksForWorkspace(workspaceId) {
+  const { error } = await db
+    .from("generated_tasks")
+    .delete()
+    .or(`workspace_id.eq.${workspaceId},product_line_id.eq.${workspaceId}`);
+
+  if (!error) return;
+
+  const { error: productLineDeleteError } = await db
+    .from("generated_tasks")
+    .delete()
+    .eq("product_line_id", workspaceId);
+
+  if (productLineDeleteError) throw productLineDeleteError;
+}
+
+async function deleteGeneratedTask(taskId) {
+  if (!canDeleteRecords()) {
+    showToast("Only administrators can delete workspace tasks.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm("Delete this workspace task? This action cannot be undone.");
+  if (!confirmed) return;
+
+  setLoading(true);
+  try {
+    const { error } = await db.from("generated_tasks").delete().eq("id", taskId);
+    if (error) throw error;
+    await logAudit("delete", "generated_tasks", taskId);
+    showToast("Workspace task deleted.", "success");
     await loadAllData();
   } catch (error) {
     showToast(error.message, "error");
@@ -3701,15 +4574,24 @@ function inferRecurrenceType(frequency = "") {
 }
 
 function moduleMetricsById(templateId) {
-  const template = activeMonitoringTemplates().find((item) => item.id === templateId);
+  const template = activeWorkspaceTemplates().find((item) => item.id === templateId)
+    || activeMonitoringTemplates().find((item) => item.id === templateId);
   if (!template) return null;
   return buildMonitoringModuleMetrics(template, elements.dashboardProductLineFilter?.value || "");
 }
 
 function openWorkspace(templateId) {
   const module = moduleMetricsById(templateId);
+  const workspaceId = module?.template?.product_line_id || "";
+  if (elements.taskWorkspaceFilter) elements.taskWorkspaceFilter.value = workspaceId;
   switchView("taskBoardView");
-  showToast(module ? `Workspace opened: ${module.template.category}.` : "Workspace tasks opened.", "success");
+  renderTaskBoard();
+  showToast(module ? `Workspace opened: ${module.template.category}. Showing its workspace tasks.` : "Workspace tasks opened.", "success");
+}
+
+function openSopWorkspace() {
+  switchView("sopView");
+  showToast("Workspace opened: SOP Library.", "success");
 }
 
 function viewModuleRecords(templateId) {
@@ -3770,7 +4652,7 @@ function exportModuleReport(templateId) {
   const rows = module.tasks.map((task) => ({
     Module: module.template.category,
     Task: task.task_title,
-    ProductLine: productLineNameRaw(task.product_line_id),
+    Workspace: productLineNameRaw(taskWorkspaceId(task)),
     AssignedTo: peopleNameRaw(task.assigned_person_id),
     Date: task.task_date,
     DueTime: task.due_time || "",
@@ -3986,7 +4868,7 @@ function templatePickerField() {
     <label>
       Workflow Template
       <select id="templatePicker" onchange="applyMonitoringTemplate(this.value)">
-        <option value="">Start blank or choose a workspace</option>
+        <option value="">Start blank or choose a workflow template</option>
         ${templates.map((template) => `
           <option value="${escapeAttribute(template.id)}">${escapeHtml(template.category)}</option>
         `).join("")}
@@ -4096,6 +4978,89 @@ function activeMonitoringTemplates() {
   return [...suggested, ...customTemplates];
 }
 
+function activeWorkspaceTemplates(productLineId = "") {
+  const workspaceTemplates = state.productLines
+    .filter((workspace) => workspaceIsDashboardVisible(workspace) && (!productLineId || workspace.id === productLineId))
+    .map(productLineToWorkspaceTemplate);
+
+  const orphanWorkflowTemplates = state.scheduleTemplates
+    .filter((schedule) => {
+      const isActive = ["active", "approved"].includes(schedule.status || "active") || schedule.approval_status === "approved";
+      const hasWorkspace = Boolean(schedule.product_line_id);
+      return isActive && (!hasWorkspace || !state.productLines.length) && !productLineId;
+    })
+    .map(scheduleToTemplate);
+
+  const taskWorkspaceTemplates = !workspaceTemplates.length && !orphanWorkflowTemplates.length && !productLineId
+    ? taskDerivedWorkspaceTemplates()
+    : [];
+
+  return [...workspaceTemplates, ...orphanWorkflowTemplates, ...taskWorkspaceTemplates];
+}
+
+function workspaceIsDashboardVisible(workspace) {
+  const status = String(workspace?.status || "active").toLowerCase();
+  return !["inactive", "archived", "disabled"].includes(status);
+}
+
+function taskDerivedWorkspaceTemplates() {
+  const workspaceIds = uniqueLabels(state.generatedTasks.map((task) => taskWorkspaceId(task)).filter(Boolean));
+  if (workspaceIds.length) {
+    return workspaceIds.map((workspaceId) => ({
+      id: `task-workspace-${workspaceId}`,
+      product_line_id: workspaceId,
+      product_line_name: productLineNameRaw(workspaceId) || "Workspace",
+      category: productLineNameRaw(workspaceId) || "Workspace",
+      objective: "Workspace inferred from existing workspace tasks.",
+      target_standard: "Tasks remain assigned to a valid workspace.",
+      frequency: "Task-driven",
+      expected_output: "Workspace tasks, records, approvals, and activity.",
+      remarks: "Workspace inferred from task records.",
+      keywords: [workspaceId]
+    }));
+  }
+
+  return state.generatedTasks.length ? [{
+    id: "unassigned-workspace",
+    category: "Unassigned Workspace Tasks",
+    objective: "Workspace tasks exist without a linked workspace.",
+    target_standard: "Every workspace task should reference one workspace.",
+    frequency: "Needs workspace assignment",
+    expected_output: "Tasks should be moved into a real workspace.",
+    remarks: "Create a workspace and assign these tasks to it.",
+    keywords: ["task", "workspace"]
+  }] : [];
+}
+
+function sopWorkspaceTemplate() {
+  return {
+    id: "sop-library",
+    sop_module: true,
+    category: "SOP Library",
+    objective: "Controlled standard operating procedure workspace.",
+    target_standard: "Current, approved, and review-ready SOP records.",
+    frequency: "Knowledge base",
+    expected_output: "Published SOPs, review dates, ownership, exports, and print-ready records.",
+    remarks: "Standard operating procedure workspace.",
+    keywords: ["sop", "procedure", "standard operating procedure"]
+  };
+}
+
+function productLineToWorkspaceTemplate(scope) {
+  return {
+    id: `scope-${scope.id}`,
+    product_line_id: scope.id,
+    product_line_name: scope.product_name,
+    category: scope.product_name || "Workspace",
+    objective: scope.description || "Configurable business workspace.",
+    target_standard: "Defined by workspace configuration.",
+    frequency: "Workspace",
+    expected_output: "Workspace tasks, records, approvals, and activity.",
+    remarks: scope.description || "Active workspace created from company configuration.",
+    keywords: [scope.id, scope.product_name].filter(Boolean)
+  };
+}
+
 function dbTemplateToModuleTemplate(template) {
   return {
     id: `db-template-${template.id}`,
@@ -4114,13 +5079,14 @@ function scheduleToTemplate(schedule) {
   return {
     id: `schedule-${schedule.id}`,
     schedule_id: schedule.id,
+    product_line_id: schedule.product_line_id,
     category: schedule.template_title,
     objective: schedule.objective || "Custom monitoring module.",
     target_standard: schedule.target_standard || "Defined by company procedure.",
     frequency: schedule.frequency || "Custom schedule",
     expected_output: schedule.expected_output || "Completed workflow record.",
     remarks: schedule.remarks || "Custom module created by the company.",
-    keywords: [schedule.template_title, categoryNameRaw(schedule.category_id)].filter(Boolean)
+    keywords: [schedule.id, schedule.template_title, categoryNameRaw(schedule.category_id)].filter(Boolean)
   };
 }
 
@@ -4170,6 +5136,20 @@ function taskStatusOptions() {
     .map((value) => ({ value, label: formattedRoleLabel(value) }));
 }
 
+function workspaceStatusOptions() {
+  return ["active", "inactive", "archived"]
+    .map((value) => ({ value, label: formattedRoleLabel(value) }));
+}
+
+function pdcaStageOptions() {
+  return [
+    { value: "plan", label: "Plan" },
+    { value: "do", label: "Do" },
+    { value: "check", label: "Check" },
+    { value: "act", label: "Act" }
+  ];
+}
+
 function recurrenceTypeOptions() {
   return ["manual", "daily", "weekly", "monthly"].map((value) => ({ value, label: formattedRoleLabel(value) }));
 }
@@ -4178,10 +5158,20 @@ function approvalStatusOptions() {
   return ["draft", "pending", "approved", "rejected"].map((value) => ({ value, label: formattedRoleLabel(value) }));
 }
 
+function sopStatusOptions() {
+  return [
+    { value: "draft", label: "Draft" },
+    { value: "under_review", label: "Under Review" },
+    { value: "active", label: "Active" },
+    { value: "archived", label: "Archived" }
+  ];
+}
+
 function permissionModules() {
   return [
     { key: "all", label: "All Modules" },
     { key: "hr", label: "People / HR" },
+    { key: "sop", label: "Standard Operating Procedure" },
     { key: "company", label: "Company Settings" },
     { key: "planning", label: "Plan" },
     { key: "do", label: "Do" },
@@ -4295,6 +5285,14 @@ function productLineNameRaw(id) {
   return item?.product_name || "";
 }
 
+function taskWorkspaceId(task) {
+  return task?.workspace_id || task?.product_line_id || "";
+}
+
+function tableHasColumn(records, columnName) {
+  return records.some((record) => Object.prototype.hasOwnProperty.call(record, columnName));
+}
+
 function categoryName(id) {
   const item = state.monitoringCategories.find((record) => record.id === id);
   return item ? escapeHtml(item.category_name) : "Not set";
@@ -4371,6 +5369,14 @@ function formatDate(value) {
   });
 }
 
+function formatShortDate(value) {
+  if (!value) return "";
+  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric"
+  });
+}
+
 function formatDateTime(value) {
   if (!value) return "N/A";
   return new Date(value).toLocaleString(undefined, {
@@ -4399,6 +5405,17 @@ function toDateInputValue(value) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function dateKey(value) {
+  if (!value) return "";
+  const date = value instanceof Date
+    ? value
+    : String(value).includes("T")
+      ? new Date(value)
+      : new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  return toDateInputValue(date);
 }
 
 function toDatetimeLocalValue(value) {
@@ -4600,6 +5617,8 @@ window.openEmployeeDocumentModal = openEmployeeDocumentModal;
 window.selectPeopleProfile = selectPeopleProfile;
 window.openEquipmentModal = openEquipmentModal;
 window.openMaintenanceModal = openMaintenanceModal;
+window.openSopModal = openSopModal;
+window.openAttendanceModal = openAttendanceModal;
 window.openProductLineModal = openProductLineModal;
 window.openMonitoringCategoryModal = openMonitoringCategoryModal;
 window.openDbTemplateModal = openDbTemplateModal;
@@ -4607,11 +5626,15 @@ window.openChecklistModal = openChecklistModal;
 window.openTemplateWorkflowModal = openTemplateWorkflowModal;
 window.openScheduleTemplateModal = openScheduleTemplateModal;
 window.openWorkspace = openWorkspace;
+window.openSopWorkspace = openSopWorkspace;
+window.workspaceDashboardDebug = workspaceDashboardDebug;
 window.openGeneratedTaskModal = openGeneratedTaskModal;
 window.openTaskDoModal = openTaskDoModal;
 window.openTaskCheckModal = openTaskCheckModal;
 window.openActionCaseModal = openActionCaseModal;
 window.deleteRecord = deleteRecord;
+window.deleteWorkspace = deleteWorkspace;
+window.deleteGeneratedTask = deleteGeneratedTask;
 window.updateUserRole = updateUserRole;
 window.updateRolePermission = updateRolePermission;
 window.markNotificationRead = markNotificationRead;
@@ -4631,11 +5654,13 @@ window.quickAddPersonnel = quickAddPersonnel;
 window.filterActionPlanItems = filterActionPlanItems;
 window.quickGoToPlans = quickGoToPlans;
 window.exportPersonnelCsv = exportPersonnelCsv;
+window.exportSopCsv = exportSopCsv;
 window.exportPlansCsv = exportPlansCsv;
 window.exportDoCsv = exportDoCsv;
 window.exportCheckCsv = exportCheckCsv;
 window.exportActionsCsv = exportActionsCsv;
 window.printPersonnelReport = printPersonnelReport;
+window.printSopReport = printSopReport;
 window.printPlansReport = printPlansReport;
 window.printDoReport = printDoReport;
 window.printCheckReport = printCheckReport;
