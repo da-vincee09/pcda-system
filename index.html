@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260530-responsive-sidebar">
+  <link rel="stylesheet" href="styles.css?v=20260531-traceability-refactor">
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -92,7 +92,7 @@
         <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
         <span class="nav-section-label">PDCA Cycle</span>
         <button class="nav-link" type="button" data-view="monitoringPlansView"><span class="nav-icon" data-icon="plan">P</span><span>Workflows</span></button>
-        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon" data-icon="items">I</span><span>Plan Items</span></button>
+        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon" data-icon="items">I</span><span>Planning</span></button>
         <button class="nav-link" type="button" data-view="doView"><span class="nav-icon" data-icon="do">D</span><span>Do</span></button>
         <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon" data-icon="check">C</span><span>Check</span></button>
         <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon" data-icon="act">A</span><span>Act</span></button>
@@ -131,7 +131,7 @@
         <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
         <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
         <button class="nav-link" type="button" data-view="monitoringPlansView"><span class="nav-icon" data-icon="plan">P</span><span>Workflows</span></button>
-        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon" data-icon="items">I</span><span>Plan Items</span></button>
+        <button class="nav-link" type="button" data-view="plansView"><span class="nav-icon" data-icon="items">I</span><span>Planning</span></button>
         <button class="nav-link" type="button" data-view="doView"><span class="nav-icon" data-icon="do">D</span><span>Do</span></button>
         <button class="nav-link" type="button" data-view="checkView"><span class="nav-icon" data-icon="check">C</span><span>Check</span></button>
         <button class="nav-link" type="button" data-view="actionsView"><span class="nav-icon" data-icon="act">A</span><span>Act</span></button>
@@ -233,6 +233,28 @@
             </div>
           </article>
         </div>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h4>Traceability</h4>
+            <button class="secondary-btn" type="button" data-view="taskBoardView">Open Task Trail</button>
+          </div>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Plan</th>
+                  <th>Plan Item</th>
+                  <th>Workspace</th>
+                  <th>Workspace Task</th>
+                  <th>SOP</th>
+                  <th>Compliance</th>
+                </tr>
+              </thead>
+              <tbody id="traceabilityTable"></tbody>
+            </table>
+          </div>
+        </article>
 
         <div class="stage-grid">
           <article class="stage-card completed">
@@ -366,6 +388,7 @@
             <h3 id="peopleProfilesTitle">HR / People</h3>
           </div>
           <div class="heading-actions">
+            <button id="addDepartmentBtn" class="secondary-btn" type="button">Add Department</button>
             <button id="addPeopleProfileBtn" class="primary-btn" type="button">Add Employee Profile</button>
           </div>
         </div>
@@ -373,6 +396,29 @@
         <div id="hrAccessNotice" class="page-notice"></div>
 
         <div id="hrDashboardCards" class="summary-grid mini"></div>
+
+        <article class="panel department-panel">
+          <div class="panel-heading">
+            <h4>Departments</h4>
+            <span class="muted-action">Department heads, employee counts, and attendance overview</span>
+          </div>
+          <div id="departmentDashboardCards" class="summary-grid mini"></div>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th>Head</th>
+                  <th>Employees</th>
+                  <th>Present Today</th>
+                  <th>Status</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="departmentsTable"></tbody>
+            </table>
+          </div>
+        </article>
 
         <article class="panel attendance-panel">
           <div class="panel-heading">
@@ -476,7 +522,14 @@
             <button id="addEquipmentBtn" class="primary-btn" type="button">Add Equipment</button>
           </div>
         </div>
-        <article class="panel">
+        <article class="panel sop-library-section">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Governing Documents</p>
+              <h4>SOP Library</h4>
+              <p>SOP records define the approved procedure and standard for performing work.</p>
+            </div>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -506,6 +559,7 @@
           <div class="heading-actions">
             <button class="secondary-btn" type="button" onclick="exportSopCsv()">Export CSV</button>
             <button class="secondary-btn" type="button" onclick="printSopReport()">Print</button>
+            <button class="secondary-btn" type="button" onclick="openSopSummaryReportModal()">Generate SOP Summary Report</button>
             <button id="addSopBtn" class="primary-btn" type="button">Create SOP</button>
           </div>
         </div>
@@ -520,10 +574,36 @@
                   <th>Version</th>
                   <th>Status</th>
                   <th>Review Date</th>
+                  <th>Attachments</th>
                   <th class="actions-cell">Actions</th>
                 </tr>
               </thead>
               <tbody id="sopTable"></tbody>
+            </table>
+          </div>
+        </article>
+        <article class="panel sop-summary-section">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Official Outputs</p>
+              <h4>SOP Summary Report History</h4>
+              <p>Consolidated compliance reports proving SOP implementation and execution are listed here.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Report</th>
+                  <th>Period</th>
+                  <th>Prepared By</th>
+                  <th>Status</th>
+                  <th>Compliance</th>
+                  <th>Generated</th>
+                  <th class="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sopSummaryReportsTable"></tbody>
             </table>
           </div>
         </article>
@@ -586,7 +666,7 @@
       <section id="taskBoardView" class="view" aria-labelledby="taskBoardTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Tasks inside a Workspace</p>
+            <p class="eyebrow">Actual assigned work performed within a workspace</p>
             <h3 id="taskBoardTitle">Workspace Tasks</h3>
           </div>
           <div class="heading-actions">
@@ -611,10 +691,13 @@
               <thead>
                 <tr>
                   <th>Task</th>
+                  <th>Plan</th>
+                  <th>Plan Item</th>
                   <th>Workspace</th>
                   <th>Date</th>
                   <th>Due</th>
                   <th>Assigned To</th>
+                  <th>SOP</th>
                   <th>Status</th>
                   <th class="actions-cell">Actions</th>
                 </tr>
@@ -716,6 +799,7 @@
           <div>
             <p class="eyebrow">PDCA Cycle</p>
             <h3 id="plansTitle">Planning</h3>
+            <p class="section-subtitle">Create a plan to define objectives, programs, and initiatives, then add plan items for the activities required to achieve that plan.</p>
           </div>
           <div class="heading-actions">
             <button class="secondary-btn" type="button" onclick="exportPlansCsv()">Export CSV</button>
@@ -725,6 +809,21 @@
         </div>
 
         <div id="planPersonnelNotice" class="page-notice"></div>
+
+        <div class="plan-guide">
+          <article>
+            <strong>1. Plan</strong>
+            <span>Defines objectives, programs, and initiatives.</span>
+          </article>
+          <article>
+            <strong>2. Plan Items</strong>
+            <span>Defines activities required to achieve a plan.</span>
+          </article>
+          <article>
+            <strong>3. PDCA Records</strong>
+            <span>Workspace tasks, SOPs, DO, CHECK, and Action records create the execution trail for each plan item.</span>
+          </article>
+        </div>
 
         <div class="plans-layout">
           <article class="panel">
@@ -950,6 +1049,6 @@
   <section id="printArea" class="print-area" aria-hidden="true"></section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20260530-responsive-sidebar"></script>
+  <script src="app.js?v=20260531-traceability-refactor"></script>
 </body>
 </html>

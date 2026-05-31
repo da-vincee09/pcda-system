@@ -25,6 +25,22 @@ add column if not exists updated_at timestamptz;
 alter table public.generated_tasks
 add column if not exists workspace_id uuid;
 
+-- Full PDCA traceability:
+-- Plan -> Plan Item -> Workspace -> Workspace Task -> SOP -> DO -> CHECK -> Action -> SOP Summary.
+alter table public.generated_tasks
+add column if not exists plan_id uuid references public.plans(id) on delete set null,
+add column if not exists plan_item_id uuid references public.plan_items(id) on delete set null,
+add column if not exists sop_id uuid references public.standard_operating_procedures(id) on delete set null;
+
+create index if not exists idx_generated_tasks_plan_id
+on public.generated_tasks(plan_id);
+
+create index if not exists idx_generated_tasks_plan_item_id
+on public.generated_tasks(plan_item_id);
+
+create index if not exists idx_generated_tasks_sop_id
+on public.generated_tasks(sop_id);
+
 update public.generated_tasks
 set workspace_id = product_line_id
 where workspace_id is null

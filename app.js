@@ -13,6 +13,7 @@ const state = {
   actions: [],
   companySettings: null,
   peopleProfiles: [],
+  departments: [],
   personQualifications: [],
   personTrainings: [],
   personHealthCertificates: [],
@@ -35,6 +36,8 @@ const state = {
   equipmentMaintenanceHistory: [],
   employeeDocuments: [],
   standardOperatingProcedures: [],
+  sopMonitoringLinks: [],
+  sopSummaryReports: [],
   attendanceRecords: [],
   userProfile: null,
   userProfiles: [],
@@ -239,6 +242,9 @@ const elements = {
   peopleProfilesTable: $("#peopleProfilesTable"),
   hrAccessNotice: $("#hrAccessNotice"),
   hrDashboardCards: $("#hrDashboardCards"),
+  addDepartmentBtn: $("#addDepartmentBtn"),
+  departmentDashboardCards: $("#departmentDashboardCards"),
+  departmentsTable: $("#departmentsTable"),
   peopleSearchInput: $("#peopleSearchInput"),
   peopleDepartmentFilter: $("#peopleDepartmentFilter"),
   peopleStatusFilter: $("#peopleStatusFilter"),
@@ -359,6 +365,7 @@ function bindStaticEvents() {
   $("#addActionBtn").addEventListener("click", () => openActionModal());
   $("#editCompanySettingsBtn")?.addEventListener("click", () => openCompanySettingsModal());
   $("#addPeopleProfileBtn")?.addEventListener("click", () => openPeopleProfileModal());
+  elements.addDepartmentBtn?.addEventListener("click", () => openDepartmentModal());
   $("#addSopBtn")?.addEventListener("click", () => openSopModal());
   $("#addWorkspaceBtn")?.addEventListener("click", () => openProductLineModal());
   elements.peopleSearchInput?.addEventListener("input", renderPeopleProfiles);
@@ -481,7 +488,8 @@ async function updateAuthView() {
 
 async function handleLogin(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const formData = new FormData(form);
   setLoading(true);
 
   const { error } = await db.auth.signInWithPassword({
@@ -496,12 +504,13 @@ async function handleLogin(event) {
   }
 
   showToast("Signed in successfully.", "success");
-  event.currentTarget.reset();
+  form.reset();
 }
 
 async function handleRegister(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const formData = new FormData(form);
   setLoading(true);
 
   const { error } = await db.auth.signUp({
@@ -522,18 +531,19 @@ async function handleRegister(event) {
   }
 
   showToast("Registration submitted. Check email confirmation if enabled.", "success");
-  event.currentTarget.reset();
+  form.reset();
   switchAuth("login");
 }
 
 async function handleAdminCreateUser(event) {
   event.preventDefault();
+  const form = event.currentTarget;
   if (!isAdmin()) {
     showToast("Only administrators can create user accounts.", "error");
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
   const fullName = String(formData.get("full_name") || "").trim();
@@ -578,7 +588,7 @@ async function handleAdminCreateUser(event) {
     }
 
     showToast("User account created.", "success");
-    event.currentTarget.reset();
+    form.reset();
     await loadAllData();
   } catch (error) {
     showToast(error.message, "error");
@@ -631,6 +641,7 @@ async function loadAllData() {
       fetchTable("action_taken", "created_at", true),
       fetchTable("company_settings", "created_at", true),
       fetchTable("people_profiles", "created_at", true),
+      fetchTable("departments", "department_name", false),
       fetchTable("person_qualifications", "created_at", true),
       fetchTable("person_trainings", "created_at", true),
       fetchTable("person_health_certificates", "created_at", true),
@@ -653,16 +664,19 @@ async function loadAllData() {
       fetchTable("equipment_maintenance_history", "created_at", true),
       fetchTable("employee_documents", "created_at", true),
       fetchTable("standard_operating_procedures", "created_at", true),
+      fetchTable("sop_monitoring_links", "created_at", true),
+      fetchTable("sop_summary_reports", "created_at", true),
       fetchTable("attendance", "created_at", true)
     ]);
 
     const [
       userProfiles, personnel, plans, planItems, doRecords, checkRecords, actions,
-      companySettings, peopleProfiles, personQualifications, personTrainings, personHealthCertificates,
+      companySettings, peopleProfiles, departments, personQualifications, personTrainings, personHealthCertificates,
       equipment, productLines, monitoringCategories, scheduleTemplates, generatedTasks,
       taskDoRecords, taskCheckRecords, actionCases, rolePermissions, notifications, auditLogs,
       fileAttachments, approvalRequests, monitoringTemplatesDb, dynamicChecklists, templateWorkflows,
-      equipmentMaintenanceHistory, employeeDocuments, standardOperatingProcedures, attendanceRecords
+      equipmentMaintenanceHistory, employeeDocuments, standardOperatingProcedures, sopMonitoringLinks,
+      sopSummaryReports, attendanceRecords
     ] = results.map((result) => (
       result.status === "fulfilled" ? result.value : []
     ));
@@ -683,6 +697,7 @@ async function loadAllData() {
     state.actions = actions;
     state.companySettings = companySettings[0] || null;
     state.peopleProfiles = peopleProfiles;
+    state.departments = departments;
     state.personQualifications = personQualifications;
     state.personTrainings = personTrainings;
     state.personHealthCertificates = personHealthCertificates;
@@ -705,6 +720,8 @@ async function loadAllData() {
     state.equipmentMaintenanceHistory = equipmentMaintenanceHistory;
     state.employeeDocuments = employeeDocuments;
     state.standardOperatingProcedures = standardOperatingProcedures;
+    state.sopMonitoringLinks = sopMonitoringLinks;
+    state.sopSummaryReports = sopSummaryReports;
     state.attendanceRecords = attendanceRecords;
 
     const failedLoads = results.filter((result) => result.status === "rejected");
@@ -783,6 +800,7 @@ function setupRealtime() {
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "generated_tasks" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "product_lines" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "departments" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "action_cases" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "standard_operating_procedures" }, () => loadAllData())
@@ -798,6 +816,7 @@ function removeRealtime() {
 function renderAll() {
   applyPermissions();
   renderDashboard();
+  renderTraceabilityDashboard();
   renderPersonnel();
   renderPlans();
   renderPlanDetails();
@@ -807,8 +826,10 @@ function renderAll() {
   renderAdminUsers();
   renderCompanySettings();
   renderPeopleProfiles();
+  renderDepartments();
   renderAttendance();
   renderSops();
+  renderSopSummaryReports();
   renderEquipment();
   renderMonitoringPlans();
   renderTaskBoard();
@@ -934,6 +955,7 @@ function applyPermissions() {
   });
   setControlAccess("#addPersonnelBtn", canManagePersonnel());
   setControlAccess("#addPeopleProfileBtn", canManagePersonnel());
+  setControlAccess("#addDepartmentBtn", canManagePersonnel());
   setControlAccess("#addAttendanceBtn", canManagePersonnel());
   setControlAccess("#addSopBtn", canManageSops());
   setControlAccess("#addWorkspaceBtn", canManagePlans());
@@ -1380,6 +1402,31 @@ function renderWorkspaceTasksDashboard() {
   `;
 }
 
+function renderTraceabilityDashboard() {
+  const table = $("#traceabilityTable");
+  if (!table) return;
+  const tasks = [...state.generatedTasks]
+    .sort((a, b) => new Date(b.updated_at || b.created_at || b.task_date) - new Date(a.updated_at || a.created_at || a.task_date))
+    .slice(0, 8);
+
+  table.innerHTML = renderRows(tasks, (task) => {
+    const plan = planForTask(task);
+    const planItem = planItemForTask(task);
+    const sop = sopForTask(task);
+    const status = taskComplianceStatus(task);
+    return `
+      <tr>
+        <td>${escapeHtml(plan?.plan_title || "Not linked")}</td>
+        <td>${escapeHtml(planItem?.category || planItem?.objective || "Not linked")}</td>
+        <td>${productLineName(taskWorkspaceId(task))}</td>
+        <td><strong>${escapeHtml(task.task_title)}</strong></td>
+        <td>${escapeHtml(sop ? sopDisplayName(sop) : "Not linked")}</td>
+        <td><span class="status-pill ${statusPillClass(status)}">${formattedRoleLabel(status)}</span></td>
+      </tr>
+    `;
+  }, 6, "No workspace task traceability records yet.");
+}
+
 function renderSopDashboardSection() {
   if (!elements.sopDashboardCards || !elements.recentSopsDashboardTable) return;
   const sops = canViewSops() ? state.standardOperatingProcedures : [];
@@ -1485,6 +1532,9 @@ function buildMonitoringModuleMetrics(template, productLineId = "") {
     .filter((task) => !["completed", "checked", "cancelled"].includes(task.task_status))
     .sort(compareTaskSchedule)[0];
   const assignedPeople = uniquePeople(moduleTasks.map((task) => task.assigned_person_id).filter(Boolean));
+  const assignedDepartments = uniqueLabels(moduleTasks
+    .map((task) => personDepartmentName(task.assigned_person_id))
+    .filter(Boolean));
   const supervisor = latestActivity?.checked_by || moduleTemplates.find((item) => item.approved_by)?.approved_by || "";
   const productLines = uniqueLabels(moduleTasks.map((task) => productLineNameRaw(taskWorkspaceId(task))).filter(Boolean));
   const workspaceLabels = productLines.length ? productLines : template.product_line_name ? [template.product_line_name] : [];
@@ -1505,6 +1555,7 @@ function buildMonitoringModuleMetrics(template, productLineId = "") {
     nextTask,
     latestActivity,
     assignedPeople,
+    assignedDepartments,
     supervisor,
     productLines: workspaceLabels,
     status,
@@ -1565,7 +1616,9 @@ function renderMonitoringModuleCard(module) {
   const nextAction = module.nextTask
     ? `${escapeHtml(module.nextTask.due_time || "Any time")} · ${formatDate(module.nextTask.task_date)}`
     : "No upcoming task";
-  const team = module.assignedPeople.length
+  const team = module.assignedDepartments?.length
+    ? module.assignedDepartments.map(escapeHtml).slice(0, 2).join(", ")
+    : module.assignedPeople.length
     ? module.assignedPeople.map(escapeHtml).slice(0, 2).join(", ")
     : module.productLines.slice(0, 2).map(escapeHtml).join(", ") || "Unassigned team";
   return `
@@ -1590,7 +1643,7 @@ function renderMonitoringModuleCard(module) {
           <strong>${nextAction}</strong>
         </div>
         <div class="workspace-meta">
-          <span>Assigned Team</span>
+          <span>Assigned Department</span>
           <strong>${team}</strong>
         </div>
       </div>
@@ -1907,7 +1960,7 @@ function renderPlanDetails() {
     elements.planDetailsPanel.innerHTML = `
       <div class="empty-state">
         <h4>Select a plan</h4>
-        <p>Plan item controls appear here after choosing a plan.</p>
+        <p>Choose a plan to see its plan items. Plan items are the actionable tasks that connect Planning to Do, Check, and Act records.</p>
       </div>
     `;
     return;
@@ -1919,8 +1972,9 @@ function renderPlanDetails() {
       <div>
         <p class="eyebrow">Plan Details</p>
         <h4>${escapeHtml(plan.plan_title)}</h4>
+        <p class="detail-helper">This plan is the container for the period. Add plan items for each actual monitoring activity, inspection, or work instruction.</p>
       </div>
-      ${canManagePlans() ? '<button class="primary-btn" type="button" onclick="openPlanItemModal()">Add Item</button>' : '<span class="muted-action">View only</span>'}
+      ${canManagePlans() ? '<button class="primary-btn" type="button" onclick="openPlanItemModal()">Add Plan Item</button>' : '<span class="muted-action">View only</span>'}
     </div>
     <ul class="meta-list">
       <li><span>Period</span><strong>${formatPeriod(plan.period_month, plan.period_year)}</strong></li>
@@ -1930,7 +1984,7 @@ function renderPlanDetails() {
       <li><span>Approved By</span><strong>${personName(plan.approved_by)}</strong></li>
     </ul>
     <div>
-      ${items.length ? items.map(renderPlanItemCard).join("") : '<div class="empty-state"><p>No plan items yet.</p></div>'}
+      ${items.length ? items.map(renderPlanItemCard).join("") : '<div class="empty-state"><h4>No plan items yet</h4><p>Add plan items to define the actual activities that employees will perform and supervisors will verify.</p></div>'}
     </div>
   `;
 }
@@ -1945,14 +1999,18 @@ function renderPlanItemCard(item) {
   return `
     <article class="item-card">
       <div class="detail-title">
-        <strong>${escapeHtml(item.category)}</strong>
+        <div>
+          <span class="item-card-label">Plan Item</span>
+          <strong>${escapeHtml(item.category)}</strong>
+        </div>
         ${actions}
       </div>
-      <p><strong>Objective:</strong> ${escapeHtml(item.objective)}</p>
+      <p><strong>Activity Objective:</strong> ${escapeHtml(item.objective)}</p>
       <p><strong>Target Standard:</strong> ${escapeHtml(item.target_standard)}</p>
       <p><strong>Responsible:</strong> ${personName(item.responsible_person)} | <strong>Frequency:</strong> ${escapeHtml(item.frequency)}</p>
       <p><strong>Expected Output:</strong> ${escapeHtml(item.expected_output)}</p>
       <p><strong>Due:</strong> ${formatDate(item.due_date)} | <strong>Remarks:</strong> ${escapeHtml(item.remarks)}</p>
+      <p><strong>Workspace Tasks:</strong> ${state.generatedTasks.filter((task) => task.plan_item_id === item.id).length} linked executable task${state.generatedTasks.filter((task) => task.plan_item_id === item.id).length === 1 ? "" : "s"}</p>
     </article>
   `;
 }
@@ -2194,9 +2252,9 @@ function renderPeopleProfiles() {
   const department = elements.peopleDepartmentFilter?.value || "";
   const status = elements.peopleStatusFilter?.value || "";
   visiblePeople = visiblePeople.filter((person) => {
-    const text = [person.complete_name, person.employee_id, person.position, person.department, person.operational_role, person.email].join(" ").toLowerCase();
+    const text = [person.complete_name, person.employee_id, person.position, departmentNameRaw(person.department_id) || person.department, person.operational_role, person.email].join(" ").toLowerCase();
     return (!search || text.includes(search))
-      && (!department || (person.department || "Unassigned") === department)
+      && (!department || personDepartmentFilterValue(person) === department)
       && (!status || (person.employment_status || "active") === status);
   });
 
@@ -2221,7 +2279,7 @@ function renderPeopleProfiles() {
 }
 
 function peopleSortValue(person, sortBy) {
-  if (sortBy === "department") return person.department || "Unassigned";
+  if (sortBy === "department") return departmentNameRaw(person.department_id) || person.department || "Unassigned";
   if (sortBy === "status") return person.employment_status || "active";
   if (sortBy === "date_hired") return person.date_hired || "";
   return person.complete_name || "";
@@ -2230,8 +2288,8 @@ function peopleSortValue(person, sortBy) {
 function updatePeopleFilters() {
   if (elements.peopleDepartmentFilter) {
     const selected = elements.peopleDepartmentFilter.value;
-    const departments = uniqueLabels(state.peopleProfiles.map((person) => person.department || "Unassigned"));
-    elements.peopleDepartmentFilter.innerHTML = `<option value="">All departments</option>${departments.map((item) => `<option value="${escapeAttribute(item)}" ${item === selected ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}`;
+    const departmentOptionsHtml = departmentFilterOptions().map((item) => `<option value="${escapeAttribute(item.value)}" ${item.value === selected ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("");
+    elements.peopleDepartmentFilter.innerHTML = `<option value="">All departments</option>${departmentOptionsHtml}`;
   }
   if (elements.peopleStatusFilter) {
     const selected = elements.peopleStatusFilter.value;
@@ -2246,7 +2304,7 @@ function renderHrDashboardCards(people, canViewAll) {
   const inactive = allPeople.filter((person) => ["inactive", "suspended", "resigned", "terminated"].includes(person.employment_status)).length;
   const missingDocs = allPeople.filter((person) => isMissingEmployeeDocuments(person)).length;
   const expiring = expiringPeopleRequirementCount(allPeople);
-  const departments = uniqueLabels(allPeople.map((person) => person.department).filter(Boolean)).length;
+  const departments = uniqueLabels(allPeople.map((person) => departmentNameRaw(person.department_id) || person.department).filter(Boolean)).length;
   const participation = employeeWorkflowParticipationRate(allPeople);
   const attendanceToday = attendanceForDate(toDateInputValue(new Date()), allPeople.map((person) => person.id));
   elements.hrDashboardCards.innerHTML = [
@@ -2262,6 +2320,81 @@ function renderHrDashboardCards(people, canViewAll) {
     ["On Leave Today", attendanceToday.on_leave],
     ["Workflow Participation", `${participation}%`]
   ].map(([label, value]) => `<article class="summary-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+}
+
+function renderDepartments() {
+  if (!elements.departmentsTable) return;
+  const canManage = canManagePersonnel();
+  const today = toDateInputValue(new Date());
+  const sourceDepartments = departmentRecordsForDisplay();
+
+  if (elements.departmentDashboardCards) {
+    const activeDepartments = sourceDepartments.filter((department) => (department.status || "active") === "active").length;
+    const mappedEmployees = state.peopleProfiles.filter((person) => person.department_id).length;
+    const heads = sourceDepartments.filter((department) => department.department_head_id).length;
+    const attendanceDepartments = uniqueLabels(state.attendanceRecords
+      .filter((record) => record.attendance_date === today)
+      .map((record) => {
+        const person = state.peopleProfiles.find((item) => item.id === record.person_id);
+        return personDepartmentFilterValue(person);
+      })
+      .filter(Boolean)).length;
+
+    elements.departmentDashboardCards.innerHTML = [
+      ["Departments", sourceDepartments.length],
+      ["Active", activeDepartments],
+      ["Employees Mapped", mappedEmployees],
+      ["With Department Head", heads],
+      ["Attendance Today", attendanceDepartments]
+    ].map(([label, value]) => `<article class="summary-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+  }
+
+  elements.departmentsTable.innerHTML = renderRows(sourceDepartments, (department) => {
+    const employees = state.peopleProfiles.filter((person) => personDepartmentFilterValue(person) === departmentFilterValue(department));
+    const presentToday = state.attendanceRecords.filter((record) => {
+      const person = employees.find((item) => item.id === record.person_id);
+      return person && record.attendance_date === today && record.status === "present";
+    }).length;
+    const realDepartment = Boolean(department.id);
+    const actions = canManage && realDepartment
+      ? `<div class="table-actions"><button type="button" onclick="openDepartmentModal('${escapeAttribute(department.id)}')">Edit</button>${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('departments', '${escapeAttribute(department.id)}')">Delete</button>` : ""}</div>`
+      : '<span class="muted-action">Text-only legacy department</span>';
+    return `
+      <tr>
+        <td><strong>${escapeHtml(department.department_name)}</strong><br><span>${escapeHtml(department.description || "")}</span></td>
+        <td>${department.department_head_id ? peopleName(department.department_head_id) : "Not assigned"}</td>
+        <td>${employees.length}</td>
+        <td>${presentToday}</td>
+        <td><span class="status-pill ${department.status === "inactive" ? "warning" : department.status === "archived" ? "danger" : ""}">${formattedRoleLabel(department.status || "active")}</span></td>
+        <td class="actions-cell">${actions}</td>
+      </tr>
+    `;
+  }, 6, "No departments found.");
+}
+
+function departmentRecordsForDisplay() {
+  const mapped = state.departments.map((department) => ({ ...department, legacy: false }));
+  const mappedNames = new Set(mapped.map((department) => String(department.department_name || "").toLowerCase()));
+  const legacy = uniqueLabels(state.peopleProfiles.map((person) => person.department).filter(Boolean))
+    .filter((name) => !mappedNames.has(String(name).toLowerCase()))
+    .map((name) => ({ id: "", department_name: name, status: "active", legacy: true }));
+  return [...mapped, ...legacy].sort((a, b) => String(a.department_name || "").localeCompare(String(b.department_name || "")));
+}
+
+function departmentFilterOptions() {
+  return departmentRecordsForDisplay().map((department) => ({
+    value: departmentFilterValue(department),
+    label: department.department_name
+  }));
+}
+
+function departmentFilterValue(department) {
+  return department?.id || `legacy:${department?.department_name || "Unassigned"}`;
+}
+
+function personDepartmentFilterValue(person = {}) {
+  if (person.department_id) return person.department_id;
+  return `legacy:${person.department || "Unassigned"}`;
 }
 
 function attendanceForDate(dateValue, personIds = []) {
@@ -2286,7 +2419,7 @@ function renderEmployeeCard(person, canManage) {
       <div>
         <strong>${escapeHtml(person.complete_name || "Unnamed employee")}</strong>
         <span>${escapeHtml(person.employee_id || "No employee ID")} · ${escapeHtml(person.position || "No position")}</span>
-        <small>${escapeHtml(person.department || "Unassigned department")} · ${escapeHtml(person.employment_type || "Employment type not set")}</small>
+        <small>${escapeHtml(departmentNameRaw(person.department_id) || person.department || "Unassigned department")} · ${escapeHtml(person.employment_type || "Employment type not set")}</small>
       </div>
       <div class="employee-card-meta">
         <span class="status-pill ${statusPillClass(status)}">${formattedRoleLabel(status)}</span>
@@ -2320,7 +2453,7 @@ function renderEmployeeProfilePanel(person, canManage) {
     </div>
     <div class="employee-tabs">
       <section><h5>Overview</h5><div class="profile-grid">
-        ${profileField("Department", person.department || "Unassigned")}
+        ${profileField("Department", departmentNameRaw(person.department_id) || person.department || "Unassigned")}
         ${profileField("Status", formattedRoleLabel(person.employment_status || "active"))}
         ${profileField("Contact", person.contact_number || "Not set")}
         ${profileField("Email", person.email || "Not set")}
@@ -2568,17 +2701,78 @@ function renderSops() {
           <strong>${escapeHtml(sop.title)}</strong>
           <span class="muted-action">${escapeHtml(sop.sop_code || "No code")} | ${escapeHtml(sop.category || "General")}</span>
         </td>
-        <td>${escapeHtml(sop.department || "All departments")}</td>
+        <td>${escapeHtml(departmentNameRaw(sop.department_id) || sop.department || "All departments")}</td>
         <td>${peopleName(sop.owner_person_id)}</td>
         <td>${escapeHtml(sop.version || "1.0")}</td>
         <td><span class="status-pill ${sop.status === "archived" ? "danger" : sop.status === "under_review" ? "warning" : ""}">${formattedRoleLabel(sop.status || "draft")}</span></td>
         <td>${formatDate(sop.review_date)}</td>
-        <td class="actions-cell">${canManage ? `<div class="table-actions"><button type="button" onclick="openSopModal('${escapeAttribute(sop.id)}')">Edit</button></div>` : '<span class="muted-action">View only</span>'}</td>
+        <td>${sopAttachmentSummary(sop.id)}</td>
+        <td class="actions-cell"><div class="table-actions"><button type="button" onclick="openSopSummaryReportModal('${escapeAttribute(sop.id)}')">Summary Report</button>${canManage ? `<button type="button" onclick="openSopModal('${escapeAttribute(sop.id)}')">Edit</button>${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('standard_operating_procedures', '${escapeAttribute(sop.id)}')">Delete</button>` : ""}` : ""}</div></td>
       </tr>
     `,
-    7,
+    8,
     canViewSops() ? "No SOP records found." : "You do not have access to SOP records."
   );
+}
+
+function renderSopSummaryReports() {
+  const table = $("#sopSummaryReportsTable");
+  if (!table) return;
+  const reports = canViewSops() ? state.sopSummaryReports : [];
+  table.innerHTML = renderRows(
+    reports,
+    (report) => {
+      const sop = state.standardOperatingProcedures.find((item) => item.id === report.sop_id);
+      return `
+        <tr>
+          <td>
+            <strong>${escapeHtml(sop?.title || report.summary_snapshot?.sop_title || "SOP Summary Report")}</strong>
+            <span class="muted-action">${escapeHtml(sop?.sop_code || report.summary_snapshot?.sop_code || "No SOP code")}</span>
+          </td>
+          <td>${escapeHtml(`${formatDate(report.period_start)} - ${formatDate(report.period_end)}`)}</td>
+          <td>${peopleName(report.prepared_by)}</td>
+          <td><span class="status-pill ${report.report_status === "archived" ? "danger" : ""}">${formattedRoleLabel(report.report_status || "generated")}</span></td>
+          <td>${escapeHtml(report.compliance_percentage ?? 0)}%</td>
+          <td>${formatDateTime(report.generated_at || report.created_at)}</td>
+          <td class="actions-cell">
+            <div class="table-actions">
+              <button type="button" onclick="printSavedSopSummaryReport('${escapeAttribute(report.id)}')">Print / Save PDF</button>
+              ${canManageSops() ? `<button type="button" onclick="openSopSummaryReportHistoryModal('${escapeAttribute(report.id)}')">Edit</button>` : ""}
+              ${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('sop_summary_reports', '${escapeAttribute(report.id)}')">Delete</button>` : ""}
+            </div>
+          </td>
+        </tr>
+      `;
+    },
+    7,
+    canViewSops() ? "No SOP Summary Reports generated yet." : "You do not have access to SOP summary reports."
+  );
+}
+
+function sopAttachmentSummary(sopId) {
+  const attachments = recordAttachments("standard_operating_procedures", sopId);
+  if (!attachments.length) return '<span class="muted-action">No files</span>';
+  const latest = attachments[0];
+  return `<span class="status-pill">${attachments.length} file${attachments.length === 1 ? "" : "s"}</span><br><span class="muted-action">${escapeHtml(latest.file_name || "Attachment")}</span>`;
+}
+
+function recordAttachments(tableName, recordId) {
+  return state.fileAttachments
+    .filter((item) => item.related_table === tableName && item.related_record_id === recordId)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+}
+
+function linkedSopSummary({ taskId = "", workspaceId = "", workflowTemplateId = "", planId = "", planItemId = "", departmentId = "" } = {}) {
+  const matches = state.standardOperatingProcedures.filter((sop) => (
+    (taskId && sop.task_id === taskId)
+    || (workspaceId && sop.workspace_id === workspaceId)
+    || (workflowTemplateId && sop.workflow_template_id === workflowTemplateId)
+    || (planId && sop.plan_id === planId)
+    || (planItemId && sop.plan_item_id === planItemId)
+    || (departmentId && sop.department_id === departmentId)
+  ));
+  if (!matches.length) return '<span class="muted-action">None linked</span>';
+  return `<span class="status-pill">${matches.length} SOP${matches.length === 1 ? "" : "s"}</span>`;
 }
 
 function renderMonitoringPlans() {
@@ -2674,16 +2868,19 @@ function renderTaskBoard() {
       return `
         <tr>
           <td><strong>${escapeHtml(task.task_title)}</strong></td>
+          <td>${escapeHtml(planForTask(task)?.plan_title || "Not linked")}</td>
+          <td>${escapeHtml(planItemForTask(task)?.category || planItemForTask(task)?.objective || "Not linked")}</td>
           <td>${productLineName(taskWorkspaceId(task))}</td>
           <td>${formatDate(task.task_date)}</td>
           <td>${escapeHtml(task.due_time || "Any time")}</td>
           <td>${peopleName(task.assigned_person_id)}</td>
+          <td>${escapeHtml(sopForTask(task) ? sopDisplayName(sopForTask(task)) : "Not linked")}</td>
           <td><span class="status-pill ${["overdue", "not_compliant"].includes(displayStatus) ? "danger" : displayStatus === "at_risk" ? "warning" : ""}">${formattedRoleLabel(displayStatus)}</span></td>
           <td class="actions-cell">${actions ? `<div class="table-actions">${actions}</div>` : '<span class="muted-action">View only</span>'}</td>
         </tr>
       `;
     },
-    7,
+    10,
     selectedWorkspaceId ? "No workspace tasks found for this workspace." : "No workspace tasks yet."
   );
 }
@@ -2743,7 +2940,7 @@ function exportSopCsv() {
   const rows = state.standardOperatingProcedures.map((sop) => ({
     Code: sop.sop_code,
     Title: sop.title,
-    Department: sop.department,
+    Department: departmentNameRaw(sop.department_id) || sop.department,
     Category: sop.category,
     Version: sop.version,
     Status: formattedRoleLabel(sop.status),
@@ -2854,7 +3051,7 @@ function printSopReport() {
   const rows = state.standardOperatingProcedures.map((sop) => [
     sop.sop_code,
     sop.title,
-    sop.department || "All departments",
+    departmentNameRaw(sop.department_id) || sop.department || "All departments",
     sop.category || "General",
     sop.version || "1.0",
     formattedRoleLabel(sop.status || "draft"),
@@ -2862,6 +3059,562 @@ function printSopReport() {
     peopleNameRaw(sop.owner_person_id)
   ]);
   printReport("Standard Operating Procedures", ["Code", "Title", "Department", "Category", "Version", "Status", "Review Date", "Owner"], rows);
+}
+
+function openSopSummaryReportModal(sopId = "") {
+  if (!canViewSops()) {
+    showToast("You do not have access to SOP records.", "error");
+    return;
+  }
+  if (!state.standardOperatingProcedures.length) {
+    showToast("Create an SOP first before generating a summary report.", "error");
+    return;
+  }
+
+  const today = new Date();
+  const periodStart = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+  const periodEnd = toDateInputValue(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  const selectedSop = state.standardOperatingProcedures.find((item) => item.id === sopId) || state.standardOperatingProcedures[0];
+  const defaults = sopSummaryDefaults(selectedSop);
+
+  openModal({
+    title: "Generate SOP Summary Report",
+    mode: "sop_summary_report_generator",
+    editingId: null,
+    fields: [
+      `<div class="form-note">
+        <strong>SOP Summary Report</strong>
+        <span>Department, workspace, owner, and approval details are pulled from the selected SOP. Choose only the report period, then fill any missing signatory if needed.</span>
+      </div>`,
+      selectField("sop_id", "SOP", sopOptions(), selectedSop?.id || sopId, true),
+      hiddenField("department_id", defaults.departmentId),
+      hiddenField("workspace_id", defaults.workspaceId),
+      inputField("department_display", "Department", "text", defaults.departmentLabel, false, { readonly: "readonly" }),
+      inputField("workspace_display", "Workspace / Product Line", "text", defaults.workspaceLabel, false, { readonly: "readonly" }),
+      inputField("period_start", "Period Start", "date", periodStart, true),
+      inputField("period_end", "Period End", "date", periodEnd, true),
+      selectField("prepared_by", "Prepared By", peopleOptions(), defaults.preparedBy, false),
+      selectField("reviewed_by", "Reviewed By", peopleOptions(), defaults.reviewedBy, false),
+      selectField("approved_by", "Approved By", peopleOptions(), defaults.approvedBy, false)
+    ]
+  });
+  const submitButton = elements.modalForm.querySelector('.form-actions .primary-btn');
+  if (submitButton) submitButton.textContent = "Generate Report";
+  applySopSummaryDefaults(selectedSop?.id || sopId);
+}
+
+function sopSummaryDefaults(sop = {}) {
+  const departmentId = sop?.department_id || "";
+  const workspaceId = sop?.workspace_id || "";
+  return {
+    departmentId,
+    workspaceId,
+    departmentLabel: departmentNameRaw(departmentId) || sop?.department || "All departments",
+    workspaceLabel: productLineNameRaw(workspaceId) || "All workspaces",
+    preparedBy: sop?.owner_person_id || "",
+    reviewedBy: sop?.owner_person_id || "",
+    approvedBy: sop?.approved_by || ""
+  };
+}
+
+function applySopSummaryDefaults(sopId) {
+  const form = elements.modalForm;
+  const sop = state.standardOperatingProcedures.find((item) => item.id === sopId);
+  if (!form || !sop) return;
+  const defaults = sopSummaryDefaults(sop);
+  if (form.elements.department_id) form.elements.department_id.value = defaults.departmentId;
+  if (form.elements.workspace_id) form.elements.workspace_id.value = defaults.workspaceId;
+  if (form.elements.department_display) form.elements.department_display.value = defaults.departmentLabel;
+  if (form.elements.workspace_display) form.elements.workspace_display.value = defaults.workspaceLabel;
+  if (form.elements.prepared_by) form.elements.prepared_by.value = defaults.preparedBy;
+  if (form.elements.reviewed_by) form.elements.reviewed_by.value = defaults.reviewedBy;
+  if (form.elements.approved_by) form.elements.approved_by.value = defaults.approvedBy;
+}
+
+function openSopSummaryReportHistoryModal(id) {
+  if (!canManageSops()) {
+    showToast("Your role cannot edit SOP summary reports.", "error");
+    return;
+  }
+  const report = state.sopSummaryReports.find((item) => item.id === id);
+  if (!report) {
+    showToast("SOP Summary Report record was not found.", "error");
+    return;
+  }
+  const sop = state.standardOperatingProcedures.find((item) => item.id === report.sop_id);
+  const defaults = sopSummaryDefaults(sop || {});
+  openModal({
+    title: "Edit SOP Summary Report",
+    mode: "sop_summary_reports",
+    editingId: id,
+    fields: [
+      `<div class="form-note">
+        <strong>Report Metadata Only</strong>
+        <span>Editing this changes the saved report record. DO, CHECK, and ACT details still come from their source records when printed.</span>
+      </div>`,
+      selectField("sop_id", "SOP", sopOptions(), report.sop_id, true),
+      hiddenField("department_id", report.department_id || defaults.departmentId),
+      hiddenField("workspace_id", report.workspace_id || defaults.workspaceId),
+      inputField("department_display", "Department", "text", departmentNameRaw(report.department_id) || defaults.departmentLabel, false, { readonly: "readonly" }),
+      inputField("workspace_display", "Workspace / Product Line", "text", productLineNameRaw(report.workspace_id) || defaults.workspaceLabel, false, { readonly: "readonly" }),
+      inputField("period_start", "Period Start", "date", report.period_start, true),
+      inputField("period_end", "Period End", "date", report.period_end, true),
+      selectField("prepared_by", "Prepared By", peopleOptions(), report.prepared_by || defaults.preparedBy, false),
+      selectField("reviewed_by", "Reviewed By", peopleOptions(), report.reviewed_by || defaults.reviewedBy, false),
+      selectField("approved_by", "Approved By", peopleOptions(), report.approved_by || defaults.approvedBy, false),
+      selectField("report_status", "Report Status", sopSummaryReportStatusOptions(), report.report_status || "generated", true)
+    ]
+  });
+  const submitButton = elements.modalForm.querySelector('.form-actions .primary-btn');
+  if (submitButton) submitButton.textContent = "Save Report";
+}
+
+async function handleSopSummaryReportSubmit(form) {
+  const payload = Object.fromEntries(new FormData(form).entries());
+  if (!payload.sop_id || !payload.period_start || !payload.period_end) {
+    showToast("Select an SOP and reporting period.", "error");
+    return;
+  }
+  if (payload.period_end < payload.period_start) {
+    showToast("Period end cannot be earlier than period start.", "error");
+    return;
+  }
+
+  const report = buildSopSummaryReportData(payload);
+  if (!report.sop) {
+    showToast("Selected SOP was not found.", "error");
+    return;
+  }
+
+  setLoading(true);
+  const reportPayload = {
+    sop_id: payload.sop_id,
+    department_id: payload.department_id || report.sop.department_id || null,
+    workspace_id: payload.workspace_id || report.sop.workspace_id || null,
+    period_start: payload.period_start,
+    period_end: payload.period_end,
+    prepared_by: payload.prepared_by || null,
+    reviewed_by: payload.reviewed_by || null,
+    approved_by: payload.approved_by || null,
+    report_status: "generated",
+    total_activities: report.summary.totalActivities,
+    completed_activities: report.summary.completedActivities,
+    checked_activities: report.summary.checkedActivities,
+    passed_checks: report.summary.passedChecks,
+    failed_checks: report.summary.failedChecks,
+    non_compliant_activities: report.summary.nonCompliantActivities,
+    open_corrective_actions: report.summary.openCorrectiveActions,
+    closed_corrective_actions: report.summary.closedCorrectiveActions,
+    compliance_percentage: report.summary.compliancePercentage,
+    summary_snapshot: report.snapshot
+  };
+
+  const { error } = await db.from("sop_summary_reports").insert(reportPayload);
+  setLoading(false);
+  if (error) {
+    showToast(`Opening print dialog. Report history was not saved: ${error.message}`, "error");
+  } else {
+    showToast("SOP Summary Report generated. Choose Save as PDF in the print dialog.", "success");
+  }
+
+  closeModal();
+  printSopSummaryReport(report);
+  await loadAllData();
+}
+
+function buildSopSummaryReportData(payload) {
+  const sop = state.standardOperatingProcedures.find((item) => item.id === payload.sop_id);
+  if (!sop) return { sop: null };
+
+  const periodStart = payload.period_start;
+  const periodEnd = payload.period_end;
+  const selectedDepartment = payload.department_id || sop.department_id || "";
+  const selectedWorkspace = payload.workspace_id || sop.workspace_id || "";
+  const linkedTemplateIds = uniqueLabels([
+    ...state.sopMonitoringLinks.filter((link) => link.sop_id === sop.id).map((link) => link.template_id),
+    sop.workflow_template_id
+  ].filter(Boolean));
+  const taskInPeriod = (task) => {
+    const value = dateKey(task.task_date || task.due_at || task.created_at);
+    return value && value >= periodStart && value <= periodEnd;
+  };
+  const tasks = state.generatedTasks
+    .filter((task) => (
+      task.sop_id === sop.id
+      || task.id === sop.task_id
+      || (linkedTemplateIds.length && linkedTemplateIds.includes(task.template_id))
+      || (selectedWorkspace && taskWorkspaceId(task) === selectedWorkspace)
+      || (sop.plan_id && task.plan_id === sop.plan_id)
+      || (sop.plan_item_id && task.plan_item_id === sop.plan_item_id)
+    ))
+    .filter((task) => !selectedWorkspace || taskWorkspaceId(task) === selectedWorkspace || task.id === sop.task_id || task.sop_id === sop.id)
+    .filter(taskInPeriod);
+  const taskIds = new Set(tasks.map((task) => task.id));
+  if (sop.task_id) taskIds.add(sop.task_id);
+
+  const doRecords = state.taskDoRecords
+    .filter((record) => taskIds.has(record.task_id))
+    .filter((record) => dateKey(record.performed_at || record.created_at) >= periodStart && dateKey(record.performed_at || record.created_at) <= periodEnd);
+  const checkRecords = state.taskCheckRecords
+    .filter((record) => taskIds.has(record.task_id))
+    .filter((record) => dateKey(record.checked_at || record.created_at) >= periodStart && dateKey(record.checked_at || record.created_at) <= periodEnd);
+  const checkIds = new Set(checkRecords.map((record) => record.id));
+  const actionCases = state.actionCases
+    .filter((item) => taskIds.has(item.task_id) || checkIds.has(item.check_record_id))
+    .filter((item) => {
+      const value = dateKey(item.created_at || item.due_at);
+      return !value || (value >= periodStart && value <= periodEnd);
+    });
+  const templates = state.scheduleTemplates.filter((template) => linkedTemplateIds.includes(template.id));
+  const completedTaskIds = new Set([
+    ...doRecords.map((record) => record.task_id),
+    ...tasks.filter((task) => ["completed", "checked"].includes(taskDisplayStatus(task))).map((task) => task.id)
+  ].filter(Boolean));
+  const nonCompliantTaskIds = new Set([
+    ...checkRecords.filter((record) => record.check_result === "not_compliant").map((record) => record.task_id),
+    ...actionCases.filter((item) => !["resolved", "verified", "closed"].includes(item.case_status)).map((item) => item.task_id)
+  ].filter(Boolean));
+  const completedActivities = completedTaskIds.size;
+  const nonCompliantActivities = nonCompliantTaskIds.size;
+  const closedCorrectiveActions = actionCases.filter((item) => ["resolved", "verified", "closed"].includes(item.case_status)).length;
+  const openCorrectiveActions = Math.max(actionCases.length - closedCorrectiveActions, 0);
+  const totalActivities = Math.max(tasks.length, doRecords.length, checkRecords.length, templates.length);
+  const compliancePercentage = totalActivities ? Math.max(0, Math.round(((totalActivities - nonCompliantActivities) / totalActivities) * 10000) / 100) : 0;
+  const traceabilityRows = tasks.map((task) => ({
+    task,
+    plan: planForTask(task),
+    planItem: planItemForTask(task),
+    workspace: state.productLines.find((item) => item.id === taskWorkspaceId(task)) || null,
+    sop: sopForTask(task) || sop,
+    doRecords: doRecords.filter((record) => record.task_id === task.id),
+    checkRecords: checkRecords.filter((record) => record.task_id === task.id),
+    actionCases: actionCases.filter((record) => record.task_id === task.id),
+    complianceStatus: taskComplianceStatus(task)
+  }));
+
+  const summary = {
+    totalActivities,
+    completedActivities,
+    checkedActivities: checkRecords.length,
+    passedChecks: checkRecords.filter((record) => record.check_result === "passed").length,
+    failedChecks: checkRecords.filter((record) => ["not_compliant", "needs_follow_up", "failed"].includes(record.check_result)).length,
+    nonCompliantActivities,
+    openCorrectiveActions,
+    closedCorrectiveActions,
+    compliancePercentage
+  };
+
+  return {
+    sop,
+    periodStart,
+    periodEnd,
+    departmentId: selectedDepartment,
+    workspaceId: selectedWorkspace,
+    preparedBy: payload.prepared_by,
+    reviewedBy: payload.reviewed_by,
+    approvedBy: payload.approved_by,
+    templates,
+    tasks,
+    traceabilityRows,
+    doRecords,
+    checkRecords,
+    actionCases,
+    summary,
+    snapshot: {
+      sop_code: sop.sop_code,
+      sop_title: sop.title,
+      department: departmentNameRaw(selectedDepartment) || sop.department || "",
+      workspace: productLineNameRaw(selectedWorkspace),
+      period_start: periodStart,
+      period_end: periodEnd,
+      traceability: traceabilityRows.map((row) => ({
+        plan: row.plan?.plan_title || "",
+        plan_item: row.planItem?.category || row.planItem?.objective || "",
+        workspace: row.workspace?.product_name || "",
+        task: row.task?.task_title || "",
+        sop: row.sop ? sopDisplayName(row.sop) : "",
+        compliance_status: row.complianceStatus
+      })),
+      generated_at: new Date().toISOString(),
+      summary
+    }
+  };
+}
+
+function printSopSummaryReport(report) {
+  const company = state.companySettings || {};
+  const sop = report.sop;
+  const preparedBy = peopleNameRaw(report.preparedBy) || peopleNameRaw(sop.owner_person_id) || "";
+  const reviewedBy = peopleNameRaw(report.reviewedBy) || "";
+  const approvedBy = peopleNameRaw(report.approvedBy) || peopleNameRaw(sop.approved_by) || "";
+  const productLine = productLineNameRaw(report.workspaceId) || "All workspaces";
+  const department = departmentNameRaw(report.departmentId) || sop.department || "All departments";
+  const docCode = `${sop.sop_code || "SOP"}-SUMMARY`;
+  const effectivityDate = formatDate(sop.effective_date || new Date().toISOString());
+  const generatedDate = formatDate(toDateInputValue(new Date()));
+  printHtmlReport("SOP Summary Report", `
+    <section class="sop-summary-document">
+      <table class="document-control-table">
+        <tbody>
+          <tr>
+            <td class="document-logo-cell" rowspan="4">
+              ${company.logo_url ? `<img src="${escapeAttribute(company.logo_url)}" alt="">` : `<strong class="document-logo-text">${escapeHtml(company.company_name || "PDCA")}</strong>`}
+            </td>
+            <td class="document-company-cell" rowspan="4">
+              <strong>${escapeHtml(company.company_name || "PDCA System")}</strong>
+              ${company.system_name ? `<span>operating under the system of</span><span>${escapeHtml(company.system_name)}</span>` : ""}
+              ${company.address ? `<span>${escapeHtml(company.address)}</span>` : ""}
+              ${company.contact_number || company.email ? `<span>${escapeHtml([company.contact_number, company.email].filter(Boolean).join(" | "))}</span>` : ""}
+              <b>SOP SUMMARY REPORT</b>
+            </td>
+            <th>Document Code:</th>
+            <td>${escapeHtml(docCode)}</td>
+            <th>Effectivity Date</th>
+          </tr>
+          <tr>
+            <th>Revision No.</th>
+            <td>${escapeHtml(sop.version || "1.0")}</td>
+            <td>${escapeHtml(effectivityDate)}</td>
+          </tr>
+          <tr>
+            <th>Document Title:</th>
+            <td>${escapeHtml("SOP Summary Report")}</td>
+            <td>Page 1</td>
+          </tr>
+          <tr>
+            <th>SOP Reference:</th>
+            <td colspan="2">${escapeHtml(`${sop.sop_code || "No code"} - ${sop.title || "Untitled SOP"}`)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="review-signature-table">
+        <tbody>
+          <tr><th>Prepared & Reviewed by:</th><th>Approved by:</th></tr>
+          <tr>
+            <td>
+              <strong>${escapeHtml([preparedBy, reviewedBy].filter(Boolean).join(" / ") || "________________________")}</strong>
+              <span>${escapeHtml(peoplePosition(report.preparedBy) || peoplePosition(report.reviewedBy) || "")}</span>
+              <em>DATE: ${escapeHtml(generatedDate)}</em>
+            </td>
+            <td>
+              <strong>${escapeHtml(approvedBy || "________________________")}</strong>
+              <span>${escapeHtml(peoplePosition(report.approvedBy) || peoplePosition(sop.approved_by) || "")}</span>
+              <em>DATE: ${escapeHtml(generatedDate)}</em>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="report-period-block">
+        <p><strong>Period Covered:</strong> ${escapeHtml(`${formatDate(report.periodStart)} to ${formatDate(report.periodEnd)}`)}</p>
+        <p><strong>Product Lines:</strong> ${escapeHtml(productLine)}</p>
+        <p><strong>Department:</strong> ${escapeHtml(department)}</p>
+      </div>
+
+      ${buildSopTraceabilityPrintSection(report)}
+
+      ${buildSopSummaryPrintSections(report)}
+
+      <h2>SOP Compliance Summary</h2>
+      <table class="print-standard-table compliance-summary-table">
+        <tbody>
+          <tr><th>Total Monitoring Activities</th><td>${report.summary.totalActivities}</td><th>Completed Activities</th><td>${report.summary.completedActivities}</td></tr>
+          <tr><th>Checked Activities</th><td>${report.summary.checkedActivities}</td><th>Passed / Failed Checks</th><td>${report.summary.passedChecks} / ${report.summary.failedChecks}</td></tr>
+          <tr><th>Non-Compliant Activities</th><td>${report.summary.nonCompliantActivities}</td><th>Overall Compliance</th><td>${report.summary.compliancePercentage}%</td></tr>
+          <tr><th>Open Corrective Actions</th><td>${report.summary.openCorrectiveActions}</td><th>Closed Corrective Actions</th><td>${report.summary.closedCorrectiveActions}</td></tr>
+          <tr><th>Monitoring Activities</th><td>${report.summary.nonCompliantActivities ? "Non-Compliant" : "Compliant"}</td><th>Verification</th><td>${report.checkRecords.some((record) => record.check_result === "not_compliant") ? "Failed" : "Passed"}</td></tr>
+        </tbody>
+      </table>
+    </section>
+  `, "sop-summary-print");
+}
+
+function buildSopTraceabilityPrintSection(report) {
+  const rows = report.traceabilityRows?.length
+    ? report.traceabilityRows.map((row) => `
+      <tr>
+        <td>${printDetailLines([
+          row.plan?.plan_title || "Not linked",
+          row.plan ? formatPeriod(row.plan.period_month, row.plan.period_year) : ""
+        ])}</td>
+        <td>${printDetailLines([
+          row.planItem?.objective || row.planItem?.category || "Not linked",
+          row.planItem?.target_standard ? `Standard: ${row.planItem.target_standard}` : "",
+          row.planItem?.expected_output ? `Output: ${row.planItem.expected_output}` : ""
+        ])}</td>
+        <td>${escapeHtml(row.workspace?.product_name || "Not linked")}</td>
+        <td>${printDetailLines([
+          row.task?.task_title,
+          row.task?.assigned_person_id ? `Assigned: ${peopleNameRaw(row.task.assigned_person_id)}` : "",
+          row.task?.task_date ? `Schedule: ${formatDate(row.task.task_date)} ${row.task.due_time || ""}` : "",
+          `Status: ${formattedRoleLabel(taskDisplayStatus(row.task))}`
+        ])}</td>
+        <td>${printDetailLines([
+          row.sop ? `${row.sop.sop_code || "SOP"} - ${row.sop.title || "Untitled SOP"}` : "Not linked",
+          row.sop?.version ? `Version: ${row.sop.version}` : "",
+          row.sop?.effective_date ? `Effective: ${formatDate(row.sop.effective_date)}` : ""
+        ])}</td>
+        <td>${printDetailLines([
+          `DO: ${row.doRecords.length}`,
+          `CHECK: ${row.checkRecords.length}`,
+          `ACTION: ${row.actionCases.length}`,
+          `Compliance: ${formattedRoleLabel(row.complianceStatus)}`
+        ])}</td>
+      </tr>
+    `).join("")
+    : '<tr><td colspan="6">No linked workspace tasks found for this SOP and period.</td></tr>';
+
+  return `
+    <section class="traceability-print-section">
+      <h2>Planning to SOP Traceability</h2>
+      <table class="print-standard-table traceability-print-table">
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th>Plan Item</th>
+            <th>Workspace</th>
+            <th>Workspace Task</th>
+            <th>SOP</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </section>
+  `;
+}
+
+function printSavedSopSummaryReport(reportId) {
+  const savedReport = state.sopSummaryReports.find((item) => item.id === reportId);
+  if (!savedReport) {
+    showToast("SOP Summary Report record was not found.", "error");
+    return;
+  }
+  const report = buildSopSummaryReportData({
+    sop_id: savedReport.sop_id,
+    department_id: savedReport.department_id || "",
+    workspace_id: savedReport.workspace_id || "",
+    period_start: savedReport.period_start,
+    period_end: savedReport.period_end,
+    prepared_by: savedReport.prepared_by || "",
+    reviewed_by: savedReport.reviewed_by || "",
+    approved_by: savedReport.approved_by || ""
+  });
+  if (!report.sop) {
+    showToast("The SOP linked to this report no longer exists.", "error");
+    return;
+  }
+  printSopSummaryReport(report);
+}
+
+function buildSopSummaryPrintSections(report) {
+  const sections = report.templates.length
+    ? report.templates
+    : [{ id: "", template_title: "SOP Monitoring Records", frequency: "Based on linked workspace tasks", product_line_id: report.workspaceId }];
+
+  return sections.map((template, index) => {
+    const tasks = report.tasks.filter((task) => !template.id || task.template_id === template.id);
+    const taskIds = new Set(tasks.map((task) => task.id));
+    const doRecords = report.doRecords.filter((record) => !template.id || taskIds.has(record.task_id));
+    const checkRecords = report.checkRecords.filter((record) => !template.id || taskIds.has(record.task_id));
+    const actionCases = report.actionCases.filter((record) => !template.id || taskIds.has(record.task_id));
+    const personnel = uniqueLabels([
+      ...tasks.map((task) => peopleNameRaw(task.assigned_person_id)),
+      ...doRecords.map((record) => peopleNameRaw(record.performed_by))
+    ].filter(Boolean)).join(", ") || "Not assigned";
+    const verifiedBy = uniqueLabels(checkRecords.map((record) => peopleNameRaw(record.checked_by)).filter(Boolean)).join(", ") || "Not yet verified";
+    const rows = doRecords.length
+      ? doRecords.map((record) => {
+        const task = state.generatedTasks.find((item) => item.id === record.task_id);
+        const check = checkRecords.find((item) => item.do_record_id === record.id || item.task_id === record.task_id);
+        const action = actionCases.find((item) => item.task_id === record.task_id || item.check_record_id === check?.id);
+        const approvedBy = peopleNameRaw(task?.approved_by) || peopleNameRaw(report.approvedBy);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(formatDateTime(record.performed_at))}</strong><span>${escapeHtml(taskName(record.task_id))}</span></td>
+            <td>${printDetailLines([record.work_done])}</td>
+            <td>${printDetailLines([
+              check?.check_result ? formattedRoleLabel(check.check_result) : "",
+              check?.observation,
+              check?.remarks
+            ])}</td>
+            <td>${printDetailLines([
+              action?.manager_instruction,
+              action?.corrective_action,
+              action?.preventive_action,
+              action?.remarks,
+              record.output_result,
+              record.remarks
+            ])}</td>
+            <td>${printDetailLines([
+              peopleNameRaw(check?.checked_by) || verifiedBy,
+              check?.checked_at ? `Checked ${formatDateTime(check.checked_at)}` : "",
+              approvedBy ? `Approved by ${approvedBy}` : "",
+              task?.approval_status && task.approval_status !== "not_required" ? `Approval ${formattedRoleLabel(task.approval_status)}` : ""
+            ])}</td>
+          </tr>
+        `;
+      }).join("")
+      : tasks.map((task) => `
+          <tr>
+            <td><strong>${escapeHtml(formatDate(task.task_date))}</strong><span>${escapeHtml(task.task_title)}</span></td>
+            <td>${escapeHtml("")}</td>
+            <td>${printDetailLines([formattedRoleLabel(taskDisplayStatus(task))])}</td>
+            <td>${printDetailLines([
+              task.priority,
+              task.remarks || template.objective || "",
+            ])}</td>
+            <td>${printDetailLines([
+              verifiedBy,
+              peopleNameRaw(task.approved_by) ? `Approved by ${peopleNameRaw(task.approved_by)}` : "",
+              task.approval_status && task.approval_status !== "not_required" ? `Approval ${formattedRoleLabel(task.approval_status)}` : ""
+            ])}</td>
+          </tr>
+        `).join("") || '<tr><td colspan="5">No monitoring records found for this section and period.</td></tr>';
+
+    return `
+      <section class="monitoring-report-section">
+        <h2>${index + 1}. ${escapeHtml(template.template_title || template.category || "Monitoring Activity")}</h2>
+        <p><strong>Frequency:</strong> ${escapeHtml(template.frequency || "Not set")}</p>
+        <p><strong>Personnel:</strong> ${escapeHtml(personnel)}</p>
+        <p><strong>Verified by:</strong> ${escapeHtml(verifiedBy)}</p>
+        <table class="print-standard-table">
+          <colgroup>
+            <col class="summary-col-activity">
+            <col class="summary-col-done">
+            <col class="summary-col-result">
+            <col class="summary-col-remarks">
+            <col class="summary-col-verified">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Date / Monitoring Activity</th>
+              <th>Activity Done</th>
+              <th>Result</th>
+              <th>Remarks / Findings</th>
+              <th>Verified By</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+    `;
+  }).join("");
+}
+
+function printDetailLines(values = []) {
+  const items = values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  if (!items.length) return "";
+  return items.map((item) => `<span class="print-detail-line">${escapeHtml(item)}</span>`).join("");
+}
+
+function peoplePosition(id) {
+  if (!id) return "";
+  const person = state.peopleProfiles.find((item) => item.id === id);
+  return person?.position || formattedRoleLabel(person?.operational_role || "");
 }
 
 function printPlansReport() {
@@ -3032,12 +3785,12 @@ function printReport(title, headers, rows) {
 function printHtmlReport(title, bodyHtml, extraClass = "") {
   const printArea = $("#printArea");
   printArea.className = `print-area ${extraClass}`.trim();
-  printArea.innerHTML = `
+  printArea.innerHTML = extraClass.includes("sop-summary-print") ? bodyHtml : `
     <h1>${escapeHtml(title)}</h1>
     <p>${escapeHtml(state.companySettings?.company_name || "PDCA System")} | Generated ${escapeHtml(formatDateTime(new Date().toISOString()))}</p>
     ${bodyHtml}
   `;
-  window.print();
+  window.setTimeout(() => window.print(), 150);
 }
 
 function switchView(viewId) {
@@ -3071,6 +3824,29 @@ function switchView(viewId) {
   elements.pageTitle.textContent = titleMap[viewId] || "Dashboard";
 }
 
+function openDepartmentModal(id = null) {
+  if (!canManagePersonnel()) {
+    showToast("Only HR or authorized managers can manage departments.", "error");
+    return;
+  }
+  const department = id ? state.departments.find((item) => item.id === id) : {};
+  openModal({
+    title: id ? "Edit Department" : "Add Department",
+    mode: "departments",
+    editingId: id,
+    fields: [
+      inputField("department_name", "Department Name", "text", department?.department_name, true),
+      textareaField("description", "Description", department?.description, false),
+      selectField("department_head_id", "Department Head", peopleOptions(), department?.department_head_id, false),
+      selectField("status", "Status", [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "archived", label: "Archived" }
+      ], department?.status || "active", true)
+    ]
+  });
+}
+
 function openPersonnelModal(id = null) {
   if (!canManagePersonnel()) {
     showToast("Only administrators can manage personnel.", "error");
@@ -3084,8 +3860,8 @@ function openPersonnelModal(id = null) {
     editingId: id,
     fields: [
       inputField("full_name", "Full Name", "text", person?.full_name, true),
-      inputField("position", "Position", "text", person?.position, true),
-      inputField("role", "Role", "text", person?.role, true)
+      selectField("position", "Position", positionOptions(), person?.position, true),
+      selectField("role", "Role", operationalRoleOptions(), normalizeRole(person?.role || "staff"), true)
     ]
   });
 }
@@ -3108,6 +3884,10 @@ function openPlanModal(id = null) {
     mode: "plans",
     editingId: id,
     fields: [
+      `<div class="form-note success">
+        <strong>What is a Plan?</strong>
+        <span>A plan is the period-level container. After saving it, open the plan and add plan items for each activity that needs Do, Check, and Act tracking.</span>
+      </div>`,
       personnelPromptField(people.length),
       inputField("plan_title", "Plan Title", "text", plan?.plan_title, true),
       selectField("period_month", "Period Month", monthNames.map((name, index) => ({ value: index + 1, label: name })), plan?.period_month, true),
@@ -3142,13 +3922,17 @@ function openPlanItemModal(id = null) {
     mode: "plan_items",
     editingId: id,
     fields: [
+      `<div class="form-note success">
+        <strong>What is a Plan Item?</strong>
+        <span>A plan item is one specific activity inside the selected plan. Do records, supervisor checks, and corrective actions connect here.</span>
+      </div>`,
       templatePickerField(),
       hiddenField("plan_id", state.selectedPlanId),
-      inputField("category", "Category", "text", item?.category, true),
+      selectField("category", "Category", workflowCategoryTextOptions(), item?.category, true),
       textareaField("objective", "Objective", item?.objective, true),
       textareaField("target_standard", "Target Standard", item?.target_standard, true),
       selectField("responsible_person", "Responsible Person", personnelOptions(), item?.responsible_person, true),
-      inputField("frequency", "Frequency", "text", item?.frequency, true),
+      selectField("frequency", "Frequency", frequencyOptions(), item?.frequency, true),
       textareaField("expected_output", "Expected Output", item?.expected_output, true),
       inputField("start_date", "Start Date", "date", item?.start_date, true, { min: minDate, max: maxDate }),
       inputField("due_date", "Due Date", "date", item?.due_date, true, { min: item?.start_date || minDate, max: maxDate }),
@@ -3328,14 +4112,16 @@ function openPeopleProfileModal(id = null) {
       inputField("contact_number", "Contact Number", "text", person?.contact_number, false),
       inputField("email", "Email", "email", person?.email, false),
       inputField("emergency_contact_number", "Emergency Contact Number", "text", person?.emergency_contact_number, false),
-      inputField("department", "Department", "text", person?.department, false),
-      inputField("position", "Position", "text", person?.position, false),
+      state.departments.length
+        ? selectField("department_id", "Department", departmentOptions(), person?.department_id, false)
+        : inputField("department", "Department", "text", person?.department, false),
+      selectField("position", "Position", positionOptions(), person?.position, false),
       selectField("operational_role", "Operational Role", operationalRoleOptions(), person?.operational_role || "staff", true),
       selectField("employment_type", "Employment Type", employmentTypeOptions(), person?.employment_type, false),
       inputField("date_hired", "Date Hired", "date", person?.date_hired, false),
       selectField("supervisor_id", "Supervisor", peopleOptions(), person?.supervisor_id, false),
-      inputField("assigned_team", "Assigned Team", "text", person?.assigned_team, false),
-      inputField("work_location", "Work Location", "text", person?.work_location, false),
+      selectField("assigned_team", "Assigned Team / Department", teamOptions(), person?.assigned_team || departmentNameRaw(person?.department_id) || person?.department, false),
+      selectField("work_location", "Work Location", workLocationOptions(), person?.work_location, false),
       inputField("shift_schedule", "Shift Schedule", "text", person?.shift_schedule, false),
       inputField("birth_date", "Birth Date", "date", person?.birth_date, false),
       inputField("emergency_contact", "Emergency Contact", "text", person?.emergency_contact, false),
@@ -3399,7 +4185,7 @@ function openEquipmentModal(id = null) {
     editingId: id,
     fields: [
       inputField("equipment_name", "Equipment Name", "text", item?.equipment_name, true),
-      inputField("equipment_type", "Type", "text", item?.equipment_type, false),
+      selectField("equipment_type", "Type", equipmentTypeOptions(), item?.equipment_type, false),
       inputField("serial_number", "Serial Number", "text", item?.serial_number, false),
       textareaField("specification", "Specification", item?.specification, false),
       inputField("year_acquired", "Year Acquired", "number", item?.year_acquired, false),
@@ -3415,7 +4201,7 @@ function openEquipmentModal(id = null) {
         { value: "needs_repair", label: "Needs Repair" },
         { value: "non_functional", label: "Non-functional" }
       ], item?.functional_state || item?.status || "functional", false),
-      inputField("location", "Location", "text", item?.location, false),
+      selectField("location", "Location", workLocationOptions(), item?.location, false),
       textareaField("maintenance_notes", "Maintenance Notes", item?.maintenance_notes, false),
       textareaField("remarks", "Remarks", item?.remarks, false)
     ]
@@ -3428,9 +4214,17 @@ function openProductLineModal(id = null) {
     return;
   }
   const item = id ? state.productLines.find((record) => record.id === id) : {};
+  const governingSop = item?.id ? governingSopForWorkspace(item.id) : null;
   const fields = [
+    `<div class="form-note success">
+      <strong>Workspace Process Link</strong>
+      <span>Choose the SOP that governs this workspace. Workspace tasks will stay connected through this workspace.</span>
+    </div>`,
     inputField("product_name", "Workspace Name", "text", item?.product_name, true),
     textareaField("description", "Description", item?.description, false),
+    canManageSops()
+      ? selectField("governing_sop_id", "Governing SOP", sopOptions(), governingSop?.id || "", false)
+      : inputField("governing_sop_display", "Governing SOP", "text", governingSop ? sopDisplayName(governingSop) : "Not linked", false, { readonly: "readonly" }),
     selectField("status", "Status", workspaceStatusOptions(), item?.status || "active", true)
   ];
 
@@ -3494,15 +4288,25 @@ function openSopModal(id = null) {
     return;
   }
   const sop = id ? state.standardOperatingProcedures.find((record) => record.id === id) : {};
+  const attachments = id ? recordAttachments("standard_operating_procedures", id) : [];
   openModal({
     title: id ? "Edit SOP" : "Create SOP",
     mode: "standard_operating_procedures",
     editingId: id,
     fields: [
+      `<div class="form-note success">
+        <strong>SOP Document Control</strong>
+        <span>Link this SOP to the correct department, workspace, workflow, task, or plan so users can find it automatically.</span>
+      </div>`,
       inputField("sop_code", "SOP Code", "text", sop?.sop_code, true, { placeholder: "SOP-OPS-001" }),
       inputField("title", "Title", "text", sop?.title, true),
-      inputField("department", "Department", "text", sop?.department, false),
-      inputField("category", "Category", "text", sop?.category, false),
+      selectField("department_id", "Department", departmentOptions(), sop?.department_id, false),
+      selectField("workspace_id", "Workspace", productLineOptions(), sop?.workspace_id, false),
+      selectField("workflow_template_id", "Workflow", scheduleTemplateOptions(), sop?.workflow_template_id, false),
+      selectField("task_id", "Workspace Task", generatedTaskOptions(), sop?.task_id, false),
+      selectField("plan_id", "Related Plan", planOptions(), sop?.plan_id, false),
+      selectField("plan_item_id", "Related Plan Item", allPlanItemOptions(), sop?.plan_item_id, false),
+      selectField("category", "Category", sopCategoryOptions(), sop?.category, false),
       inputField("version", "Version", "text", sop?.version || "1.0", true),
       selectField("status", "Status", sopStatusOptions(), sop?.status || "draft", true),
       inputField("effective_date", "Effective Date", "date", sop?.effective_date, false),
@@ -3514,7 +4318,9 @@ function openSopModal(id = null) {
       textareaField("procedure_body", "Procedure", sop?.procedure_body, false),
       textareaField("responsibilities", "Responsibilities", sop?.responsibilities, false),
       textareaField("required_forms", "Required Forms", sop?.required_forms, false),
-      checkboxField("attachments_required", "Attachments required", sop?.attachments_required)
+      checkboxField("attachments_required", "Attachments required", sop?.attachments_required),
+      sopAttachmentUploadField(sop?.attachments_required),
+      sopCurrentAttachmentsField(attachments)
     ]
   });
 }
@@ -3562,7 +4368,7 @@ function openMonitoringCategoryModal(id = null) {
     fields: [
       inputField("category_name", "Workflow Group Name", "text", item?.category_name, true),
       textareaField("description", "Description", item?.description, false),
-      inputField("default_frequency", "Default Frequency", "text", item?.default_frequency, false),
+      selectField("default_frequency", "Default Frequency", frequencyOptions(), item?.default_frequency, false),
       selectField("status", "Status", [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }], item?.status || "active", true)
     ]
   });
@@ -3581,9 +4387,9 @@ function openDbTemplateModal(id = null) {
     fields: [
       selectField("business_type", "Business Type", businessTypeOptions(), item?.business_type || currentBusinessType(), true),
       inputField("module_name", "Module Name", "text", item?.module_name, true),
-      inputField("module_category", "Module Category", "text", item?.module_category, false),
+      selectField("module_category", "Module Category", workflowCategoryTextOptions(), item?.module_category, false),
       textareaField("description", "Description", item?.description, false),
-      inputField("default_frequency", "Default Frequency", "text", item?.default_frequency, false),
+      selectField("default_frequency", "Default Frequency", frequencyOptions(), item?.default_frequency, false),
       textareaField("objective", "Objective", item?.objective, false),
       textareaField("target_standard", "Target Standard", item?.target_standard, false),
       textareaField("expected_output", "Expected Output", item?.expected_output, false),
@@ -3655,7 +4461,7 @@ function openScheduleTemplateModal(id = null) {
       textareaField("objective", "Objective", item?.objective, false),
       textareaField("target_standard", "Target Standard", item?.target_standard, false),
       textareaField("expected_output", "Expected Output", item?.expected_output, false),
-      inputField("frequency", "Frequency", "text", item?.frequency || "Daily", true),
+      selectField("frequency", "Frequency", frequencyOptions(), item?.frequency || "Daily", true),
       inputField("start_date", "Start Date", "date", item?.start_date, false),
       inputField("end_date", "End Date", "date", item?.end_date, false),
       inputField("due_time", "Due Time", "time", item?.due_time, false),
@@ -3695,9 +4501,20 @@ function openGeneratedTaskModal(id = null, templateId = "") {
     mode: "generated_tasks",
     editingId: id,
     fields: [
+      `<div class="form-note success">
+        <strong>Workspace Task Traceability</strong>
+        <span>Actual assigned work performed within a workspace. Link the Plan, Plan Item, Workspace, and SOP so the SOP Summary Report can prove the full audit trail.</span>
+      </div>`,
+      selectField("plan_id", "Plan", planOptions(), item?.plan_id || template?.plan_id || "", false),
+      selectField("plan_item_id", "Plan Item", allPlanItemOptions(), item?.plan_item_id || template?.plan_item_id || "", false),
       selectField("template_id", "Workflow", scheduleTemplateOptions(), item?.template_id || templateId, false),
       hiddenField("category_id", item?.category_id || template?.category_id || ""),
       selectField("product_line_id", "Workspace", productLineOptions(), taskWorkspaceId(item) || template?.product_line_id || selectedWorkspaceId, false),
+      selectField("sop_id", "SOP", sopOptions(), item?.sop_id || governingSopForWorkspace(taskWorkspaceId(item) || template?.product_line_id || selectedWorkspaceId)?.id || "", false),
+      `<div class="form-note">
+        <strong>SOP</strong>
+        <span>Defines the approved procedure and standard for performing work. A direct SOP link is used first; workspace and workflow SOP links remain as backup.</span>
+      </div>`,
       hiddenField("equipment_id", item?.equipment_id || template?.equipment_id || ""),
       inputField("task_title", "Workspace Task Title", "text", item?.task_title || template?.template_title, true),
       textareaField("remarks", "Description", item?.remarks, false),
@@ -3831,6 +4648,7 @@ function openModal({ title, mode, editingId, fields }) {
   `;
   elements.modalForm.onsubmit = handleModalSubmit;
   elements.modalBackdrop.classList.remove("is-hidden");
+  bindRelationshipAutofill();
 }
 
 function closeModal() {
@@ -3841,10 +4659,150 @@ function closeModal() {
   state.editingId = null;
 }
 
+function bindRelationshipAutofill() {
+  const form = elements.modalForm;
+  if (!form) return;
+
+  if (state.modalMode === "people_profiles") {
+    form.elements.department_id?.addEventListener("change", (event) => {
+      const departmentName = departmentNameRaw(event.target.value);
+      if (form.elements.assigned_team && departmentName) form.elements.assigned_team.value = departmentName;
+    });
+  }
+
+  if (state.modalMode === "generated_tasks") {
+    form.elements.template_id?.addEventListener("change", (event) => applyTaskWorkflow(event.target.value));
+    form.elements.plan_id?.addEventListener("change", (event) => applyTaskPlanRelationship(event.target.value));
+    form.elements.plan_item_id?.addEventListener("change", (event) => applyTaskPlanItemRelationship(event.target.value));
+    form.elements.product_line_id?.addEventListener("change", (event) => applyTaskWorkspaceRelationship(event.target.value));
+    form.elements.sop_id?.addEventListener("change", (event) => applyTaskSopRelationship(event.target.value));
+  }
+
+  if (state.modalMode === "standard_operating_procedures") {
+    form.elements.task_id?.addEventListener("change", (event) => applySopTaskRelationship(event.target.value));
+    form.elements.workflow_template_id?.addEventListener("change", (event) => applySopWorkflowRelationship(event.target.value));
+    form.elements.workspace_id?.addEventListener("change", (event) => applySopWorkspaceRelationship(event.target.value));
+    form.elements.plan_id?.addEventListener("change", (event) => applySopPlanRelationship(event.target.value));
+    const attachmentToggle = form.elements.attachments_required;
+    const uploadField = form.querySelector("[data-sop-attachment-upload]");
+    const syncAttachmentUpload = () => {
+      if (!uploadField) return;
+      const checked = Boolean(form.querySelector('[name="attachments_required"][type="checkbox"]')?.checked);
+      uploadField.hidden = !checked;
+      const input = uploadField.querySelector('input[type="file"]');
+      if (input && !checked) input.value = "";
+    };
+    if (attachmentToggle) {
+      form.querySelector('[name="attachments_required"][type="checkbox"]')?.addEventListener("change", syncAttachmentUpload);
+      syncAttachmentUpload();
+    }
+  }
+
+  if (state.modalMode === "sop_summary_report_generator") {
+    form.elements.sop_id?.addEventListener("change", (event) => applySopSummaryDefaults(event.target.value));
+  }
+
+  if (state.modalMode === "sop_summary_reports") {
+    form.elements.sop_id?.addEventListener("change", (event) => applySopSummaryDefaults(event.target.value));
+  }
+}
+
+function applyTaskWorkflow(templateId) {
+  const form = elements.modalForm;
+  const template = state.scheduleTemplates.find((record) => record.id === templateId);
+  if (!form || !template) return;
+
+  if (form.elements.category_id) form.elements.category_id.value = template.category_id || "";
+  if (form.elements.product_line_id) form.elements.product_line_id.value = template.product_line_id || "";
+  if (form.elements.sop_id && template.product_line_id && !form.elements.sop_id.value) {
+    form.elements.sop_id.value = governingSopForWorkspace(template.product_line_id)?.id || "";
+  }
+  if (form.elements.equipment_id) form.elements.equipment_id.value = template.equipment_id || "";
+  if (form.elements.due_time) form.elements.due_time.value = template.due_time || "";
+  if (form.elements.task_title && (!form.elements.task_title.value || form.elements.task_title.value === "Workspace Task Title")) {
+    form.elements.task_title.value = template.template_title || "";
+  }
+  if (form.elements.remarks && !form.elements.remarks.value) form.elements.remarks.value = template.remarks || template.objective || "";
+}
+
+function applyTaskPlanRelationship(planId) {
+  const form = elements.modalForm;
+  if (!form) return;
+  const item = state.planItems.find((record) => record.plan_id === planId);
+  if (form.elements.plan_item_id && item) form.elements.plan_item_id.value = item.id;
+}
+
+function applyTaskPlanItemRelationship(planItemId) {
+  const form = elements.modalForm;
+  const item = state.planItems.find((record) => record.id === planItemId);
+  if (!form || !item) return;
+  if (form.elements.plan_id) form.elements.plan_id.value = item.plan_id || "";
+  if (form.elements.task_title && !form.elements.task_title.value) form.elements.task_title.value = item.category || item.objective || "";
+  if (form.elements.remarks && !form.elements.remarks.value) form.elements.remarks.value = item.objective || item.expected_output || "";
+}
+
+function applyTaskWorkspaceRelationship(workspaceId) {
+  const form = elements.modalForm;
+  if (!form || !workspaceId) return;
+  if (form.elements.sop_id && !form.elements.sop_id.value) {
+    form.elements.sop_id.value = governingSopForWorkspace(workspaceId)?.id || "";
+  }
+}
+
+function applyTaskSopRelationship(sopId) {
+  const form = elements.modalForm;
+  const sop = state.standardOperatingProcedures.find((record) => record.id === sopId);
+  if (!form || !sop) return;
+  if (form.elements.product_line_id && sop.workspace_id) form.elements.product_line_id.value = sop.workspace_id;
+  if (form.elements.template_id && sop.workflow_template_id && !form.elements.template_id.value) form.elements.template_id.value = sop.workflow_template_id;
+  if (form.elements.plan_id && sop.plan_id && !form.elements.plan_id.value) form.elements.plan_id.value = sop.plan_id;
+  if (form.elements.plan_item_id && sop.plan_item_id && !form.elements.plan_item_id.value) form.elements.plan_item_id.value = sop.plan_item_id;
+}
+
+function applySopTaskRelationship(taskId) {
+  const form = elements.modalForm;
+  const task = state.generatedTasks.find((record) => record.id === taskId);
+  if (!form || !task) return;
+
+  if (form.elements.workspace_id) form.elements.workspace_id.value = taskWorkspaceId(task) || "";
+  if (form.elements.workflow_template_id) form.elements.workflow_template_id.value = task.template_id || "";
+  if (form.elements.plan_id) form.elements.plan_id.value = task.plan_id || "";
+  if (form.elements.plan_item_id) form.elements.plan_item_id.value = task.plan_item_id || "";
+  const person = state.peopleProfiles.find((record) => record.id === task.assigned_person_id);
+  if (form.elements.department_id && person?.department_id) form.elements.department_id.value = person.department_id;
+  if (form.elements.owner_person_id && task.assigned_person_id) form.elements.owner_person_id.value = task.assigned_person_id;
+}
+
+function applySopWorkflowRelationship(templateId) {
+  const form = elements.modalForm;
+  const template = state.scheduleTemplates.find((record) => record.id === templateId);
+  if (!form || !template) return;
+  if (form.elements.workspace_id) form.elements.workspace_id.value = template.product_line_id || "";
+  if (form.elements.category && !form.elements.category.value) form.elements.category.value = categoryNameRaw(template.category_id) || "";
+}
+
+function applySopWorkspaceRelationship(workspaceId) {
+  const form = elements.modalForm;
+  if (!form || !workspaceId) return;
+  const task = state.generatedTasks.find((record) => taskWorkspaceId(record) === workspaceId);
+  if (task && form.elements.task_id && !form.elements.task_id.value) applySopTaskRelationship(task.id);
+}
+
+function applySopPlanRelationship(planId) {
+  const form = elements.modalForm;
+  if (!form || !planId) return;
+  const item = state.planItems.find((record) => record.plan_id === planId);
+  if (item && form.elements.plan_item_id && !form.elements.plan_item_id.value) form.elements.plan_item_id.value = item.id;
+}
+
 async function handleModalSubmit(event) {
   event.preventDefault();
   if (state.modalMode === "change_password") {
     await handleChangePasswordSubmit(event.currentTarget);
+    return;
+  }
+  if (state.modalMode === "sop_summary_report_generator") {
+    await handleSopSummaryReportSubmit(event.currentTarget);
     return;
   }
 
@@ -3864,12 +4822,20 @@ async function handleModalSubmit(event) {
     showToast("Only HR or managers can manage employee document records.", "error");
     return;
   }
+  if (state.modalMode === "departments" && !canManagePersonnel()) {
+    showToast("Only HR or authorized managers can manage departments.", "error");
+    return;
+  }
   if (state.modalMode === "attendance" && !canManagePersonnel()) {
     showToast("Only HR or authorized managers can manage attendance.", "error");
     return;
   }
   if (state.modalMode === "standard_operating_procedures" && !canManageSops()) {
     showToast("Your role cannot manage SOP records.", "error");
+    return;
+  }
+  if (state.modalMode === "sop_summary_reports" && !canManageSops()) {
+    showToast("Your role cannot edit SOP summary reports.", "error");
     return;
   }
   if (state.modalMode === "company_settings" && !canManageCompanySettings()) {
@@ -3913,20 +4879,25 @@ async function handleModalSubmit(event) {
     return;
   }
   if (![
-    "personnel", "user_profiles", "people_profiles", "attendance", "change_password",
+    "personnel", "user_profiles", "people_profiles", "departments", "attendance", "change_password",
     "company_settings", "equipment", "equipment_maintenance_history", "product_lines", "monitoring_categories",
     "monitoring_schedule_templates", "monitoring_templates", "dynamic_checklists", "template_workflows", "generated_tasks", "task_do_records",
     "task_check_records", "action_cases", "plans", "plan_items", "do_records",
-    "check_records", "action_taken", "employee_documents", "standard_operating_procedures"
+    "check_records", "action_taken", "employee_documents", "standard_operating_procedures", "sop_summary_reports"
   ].includes(state.modalMode) && !canManageRecords()) {
     showToast("Your account is view-only until an administrator assigns a role.", "error");
     return;
   }
 
   const formData = new FormData(event.currentTarget);
-  const evidenceFile = formData.get("evidence_file");
+  let evidenceFiles = formData.getAll("evidence_file").filter((file) => file instanceof File && file.size);
   const payload = Object.fromEntries(formData.entries());
   delete payload.evidence_file;
+  delete payload.department_display;
+  delete payload.workspace_display;
+  delete payload.governing_sop_display;
+  const selectedGoverningSopId = state.modalMode === "product_lines" ? payload.governing_sop_id || null : undefined;
+  delete payload.governing_sop_id;
 
   Object.keys(payload).forEach((key) => {
     if (payload[key] === "") payload[key] = null;
@@ -3940,6 +4911,9 @@ async function handleModalSubmit(event) {
   ["auto_generate", "requires_approval", "manager_notified", "evidence_required", "checklist_enabled", "verification_required", "corrective_action_required", "is_active", "requires_evidence", "attachments_required"].forEach((key) => {
     if (key in payload) payload[key] = payload[key] === "true";
   });
+  if (state.modalMode === "standard_operating_procedures" && !payload.attachments_required) {
+    evidenceFiles = [];
+  }
   ["recurrence_days", "recurrence_times"].forEach((key) => {
     if (payload[key]) {
       payload[key] = String(payload[key]).split(",").map((item) => item.trim()).filter(Boolean);
@@ -3947,6 +4921,25 @@ async function handleModalSubmit(event) {
   });
   if (state.modalMode === "monitoring_schedule_templates" && payload.requires_approval && payload.approval_status === "draft") {
     payload.approval_status = "pending";
+  }
+  if (state.modalMode === "people_profiles" && "department_id" in payload) {
+    payload.department = payload.department_id ? departmentNameRaw(payload.department_id) : null;
+    payload.assigned_team = payload.department || payload.assigned_team || null;
+  }
+  if (state.modalMode === "standard_operating_procedures" && "department_id" in payload) {
+    payload.department = payload.department_id ? departmentNameRaw(payload.department_id) : null;
+  }
+  if (state.modalMode === "sop_summary_reports") {
+    const report = buildSopSummaryReportData(payload);
+    if (report.sop) {
+      payload.total_activities = report.summary.totalActivities;
+      payload.completed_activities = report.summary.completedActivities;
+      payload.non_compliant_activities = report.summary.nonCompliantActivities;
+      payload.open_corrective_actions = report.summary.openCorrectiveActions;
+      payload.closed_corrective_actions = report.summary.closedCorrectiveActions;
+      payload.compliance_percentage = report.summary.compliancePercentage;
+      payload.summary_snapshot = report.snapshot;
+    }
   }
 
   const validationMessage = validateDates(state.modalMode, payload);
@@ -3956,28 +4949,32 @@ async function handleModalSubmit(event) {
   }
 
   if (state.modalMode === "generated_tasks") {
+    if (payload.plan_item_id && !payload.plan_id) {
+      payload.plan_id = state.planItems.find((item) => item.id === payload.plan_item_id)?.plan_id || null;
+    }
     payload.workspace_id = payload.product_line_id || null;
   }
 
-  if (state.modalMode === "generated_tasks" || (state.modalMode === "product_lines" && tableHasColumn(state.productLines, "updated_at"))) {
+  if (state.modalMode === "generated_tasks" || (state.modalMode === "product_lines" && tableHasColumn(state.productLines, "updated_at")) || state.modalMode === "departments") {
     payload.updated_at = new Date().toISOString();
   }
 
   setLoading(true);
   try {
-    const query = db.from(state.modalMode);
-    const { data: savedRecord, error } = state.editingId
-      ? await query.update(payload).eq("id", state.editingId).select("*").single()
-      : await query.insert(payload).select("*").single();
-
-    if (error) throw error;
+    const { savedRecord } = await saveModalRecord(state.modalMode, payload, state.editingId);
     const recordId = savedRecord?.id || state.editingId;
-    let attachmentRecord = null;
-    if (evidenceFile instanceof File && evidenceFile.size && recordId) {
-      attachmentRecord = await uploadAttachment(evidenceFile, state.modalMode, recordId, state.modalMode === "employee_documents" ? "employee_document" : "evidence");
-      if (state.modalMode === "employee_documents" && attachmentRecord?.id) {
-        await db.from("employee_documents").update({ file_attachment_id: attachmentRecord.id }).eq("id", recordId);
+    const uploadedAttachments = [];
+    if (evidenceFiles.length && recordId) {
+      for (const evidenceFile of evidenceFiles) {
+        const attachmentRecord = await uploadAttachment(evidenceFile, state.modalMode, recordId, attachmentTypeForMode(state.modalMode));
+        uploadedAttachments.push(attachmentRecord);
       }
+      if (state.modalMode === "employee_documents" && uploadedAttachments[0]?.id) {
+        await db.from("employee_documents").update({ file_attachment_id: uploadedAttachments[0].id }).eq("id", recordId);
+      }
+    }
+    if (state.modalMode === "product_lines" && recordId) {
+      await syncWorkspaceGoverningSop(recordId, selectedGoverningSopId);
     }
     await afterRecordSaved(state.modalMode, payload, savedRecord);
     await logAudit(state.editingId ? "update" : "insert", state.modalMode, recordId, payload);
@@ -4041,6 +5038,40 @@ async function uploadAttachment(file, relatedTable, relatedRecordId, attachmentT
 
   if (error) throw error;
   return data;
+}
+
+async function saveModalRecord(tableName, payload, editingId = null) {
+  const runSave = async (dataPayload) => {
+    const query = db.from(tableName);
+    return editingId
+      ? await query.update(dataPayload).eq("id", editingId).select("*").single()
+      : await query.insert(dataPayload).select("*").single();
+  };
+
+  let { data, error } = await runSave(payload);
+  if (!error) return { savedRecord: data };
+
+  const retryPayload = schemaCompatiblePayload(tableName, payload, error);
+  if (!retryPayload) throw error;
+
+  const retry = await runSave(retryPayload);
+  if (retry.error) throw retry.error;
+  showToast("Saved without new traceability columns. Run the Supabase migration to activate full Plan/SOP task links.", "error");
+  return { savedRecord: retry.data };
+}
+
+function schemaCompatiblePayload(tableName, payload, error) {
+  const message = String(error?.message || "");
+  if (tableName !== "generated_tasks" || !/plan_id|plan_item_id|sop_id|schema cache|column/i.test(message)) return null;
+  const retryPayload = { ...payload };
+  ["plan_id", "plan_item_id", "sop_id"].forEach((key) => delete retryPayload[key]);
+  return retryPayload;
+}
+
+function attachmentTypeForMode(mode) {
+  if (mode === "employee_documents") return "employee_document";
+  if (mode === "standard_operating_procedures") return "sop_document";
+  return "evidence";
 }
 
 async function logAudit(action, tableName, recordId, newData = null) {
@@ -4169,6 +5200,30 @@ async function afterRecordSaved(mode, payload, savedRecord = null) {
   }
 }
 
+async function syncWorkspaceGoverningSop(workspaceId, sopId = null) {
+  if (!workspaceId || !canManageSops()) return;
+
+  const clearQuery = db
+    .from("standard_operating_procedures")
+    .update({ workspace_id: null })
+    .eq("workspace_id", workspaceId);
+
+  const { error: clearError } = sopId
+    ? await clearQuery.neq("id", sopId)
+    : await clearQuery;
+
+  if (clearError) throw clearError;
+
+  if (sopId) {
+    const { error: linkError } = await db
+      .from("standard_operating_procedures")
+      .update({ workspace_id: workspaceId })
+      .eq("id", sopId);
+
+    if (linkError) throw linkError;
+  }
+}
+
 async function generateTasksFromTemplate(template) {
   const start = template.generation_start_date || template.start_date;
   const end = template.generation_end_date || template.end_date || start;
@@ -4190,6 +5245,7 @@ async function generateTasksFromTemplate(template) {
     category_id: template.category_id || null,
     product_line_id: template.product_line_id || null,
     workspace_id: template.product_line_id || null,
+    sop_id: governingSopForWorkspace(template.product_line_id)?.id || null,
     equipment_id: template.equipment_id || null,
     task_title: template.template_title,
     task_date: dateValue,
@@ -4204,7 +5260,16 @@ async function generateTasksFromTemplate(template) {
   if (!tasks.length) return;
 
   try {
-    const { error } = await db.from("generated_tasks").insert(tasks);
+    let { error } = await db.from("generated_tasks").insert(tasks);
+    if (error) {
+      const retryTasks = tasks.map((task) => {
+        const clone = { ...task };
+        ["plan_id", "plan_item_id", "sop_id"].forEach((key) => delete clone[key]);
+        return clone;
+      });
+      const retry = await db.from("generated_tasks").insert(retryTasks);
+      error = retry.error;
+    }
     if (error) throw error;
     await logAudit("generate_tasks", "generated_tasks", template.id, { count: tasks.length, template_id: template.id });
   } catch (error) {
@@ -4753,12 +5818,33 @@ function checkboxField(name, label, checked = false) {
   `;
 }
 
-function fileField(name, label) {
+function fileField(name, label, multiple = false) {
   return `
     <label>
       ${label}
-      <input name="${name}" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+      <input name="${name}" type="file" ${multiple ? "multiple" : ""} accept="application/pdf,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+      <small class="field-hint">Accepted: PDF, images, Word, and Excel files.</small>
     </label>
+  `;
+}
+
+function sopAttachmentUploadField(visible = false) {
+  return `
+    <label data-sop-attachment-upload ${visible ? "" : "hidden"}>
+      Upload SOP Attachment
+      <input name="evidence_file" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+      <small class="field-hint">Accepted: PDF, images, Word, and Excel files. This field appears only when attachments are required.</small>
+    </label>
+  `;
+}
+
+function sopCurrentAttachmentsField(attachments = []) {
+  if (!attachments.length) return "";
+  return `
+    <div class="form-note">
+      <strong>Current Attachments</strong>
+      <span>${attachments.map((item) => escapeHtml(item.file_name || "Attachment")).join(", ")}</span>
+    </div>
   `;
 }
 
@@ -4899,6 +5985,172 @@ function peopleOptions() {
     value: person.id,
     label: `${person.complete_name} - ${person.position || formattedRoleLabel(person.operational_role)}`
   }));
+}
+
+function sopOptions() {
+  return state.standardOperatingProcedures.map((sop) => ({
+    value: sop.id,
+    label: sopDisplayName(sop)
+  }));
+}
+
+function sopDisplayName(sop) {
+  return `${sop?.sop_code || "SOP"} - ${sop?.title || "Untitled SOP"}`;
+}
+
+function governingSopForWorkspace(workspaceId) {
+  return state.standardOperatingProcedures.find((sop) => sop.workspace_id === workspaceId) || null;
+}
+
+function textOptions(values) {
+  return uniqueLabels(values.map((value) => String(value || "").trim()).filter(Boolean))
+    .sort((a, b) => a.localeCompare(b))
+    .map((value) => ({ value, label: value }));
+}
+
+function mergedTextOptions(defaults, values = []) {
+  return textOptions([...defaults, ...values]);
+}
+
+function departmentOptions() {
+  return state.departments.map((department) => ({
+    value: department.id,
+    label: department.department_name
+  }));
+}
+
+function departmentNameOptions() {
+  return textOptions(departmentRecordsForDisplay().map((department) => department.department_name));
+}
+
+function positionOptions() {
+  return mergedTextOptions([
+    "Owner",
+    "General Manager",
+    "HR Manager",
+    "HR Staff",
+    "Production Manager",
+    "Production Supervisor",
+    "Food Safety Compliance Officer",
+    "Quality Assurance Officer",
+    "Quality Control Staff",
+    "Warehouse Staff",
+    "Maintenance Staff",
+    "Food Handler",
+    "Employee",
+    "Staff"
+  ], [
+    ...state.peopleProfiles.map((person) => person.position),
+    ...state.personnel.map((person) => person.position)
+  ]);
+}
+
+function teamOptions() {
+  return mergedTextOptions([
+    "Management",
+    "Operations",
+    "Production",
+    "Quality Assurance",
+    "Quality Control",
+    "Food Safety",
+    "Warehouse",
+    "Maintenance",
+    "Human Resources"
+  ], [
+    ...departmentNameOptions().map((option) => option.value),
+    ...state.peopleProfiles.map((person) => person.assigned_team),
+    ...state.peopleProfiles.map((person) => departmentNameRaw(person.department_id) || person.department)
+  ]);
+}
+
+function workLocationOptions() {
+  return mergedTextOptions([
+    "Main Office",
+    "Production Area",
+    "Warehouse",
+    "Receiving Area",
+    "Cold Storage",
+    "Quality Control Area",
+    "Maintenance Area",
+    "Field / Site",
+    "Remote"
+  ], [
+    ...state.peopleProfiles.map((person) => person.work_location),
+    ...state.equipment.map((item) => item.location),
+    ...state.productLines.map((workspace) => workspace.product_name)
+  ]);
+}
+
+function equipmentTypeOptions() {
+  return mergedTextOptions([
+    "Production Equipment",
+    "Cold Storage",
+    "Cooking Equipment",
+    "Packaging Equipment",
+    "Vehicle",
+    "Tool",
+    "Facility",
+    "IT Equipment",
+    "Safety Equipment"
+  ], state.equipment.map((item) => item.equipment_type));
+}
+
+function workflowCategoryTextOptions() {
+  return mergedTextOptions([
+    "Operations",
+    "Quality",
+    "Safety",
+    "Maintenance",
+    "HR",
+    "Compliance",
+    "Inventory",
+    "Logistics",
+    "Production"
+  ], [
+    ...state.monitoringCategories.map((category) => category.category_name),
+    ...state.planItems.map((item) => item.category),
+    ...state.monitoringTemplatesDb.map((template) => template.module_category),
+    ...workflowTemplates.map((template) => template.category)
+  ]);
+}
+
+function sopCategoryOptions() {
+  return mergedTextOptions([
+    "Policy",
+    "Procedure",
+    "Work Instruction",
+    "Checklist",
+    "Form",
+    "Operations",
+    "Safety",
+    "Quality",
+    "HR",
+    "Maintenance"
+  ], [
+    ...state.standardOperatingProcedures.map((sop) => sop.category),
+    ...state.monitoringCategories.map((category) => category.category_name)
+  ]);
+}
+
+function frequencyOptions() {
+  return mergedTextOptions([
+    "Manual",
+    "Daily",
+    "Per Shift",
+    "Weekly",
+    "Monthly",
+    "Quarterly",
+    "Annually",
+    "Every receiving activity",
+    "Before use",
+    "After use",
+    "As needed"
+  ], [
+    ...state.planItems.map((item) => item.frequency),
+    ...state.monitoringCategories.map((category) => category.default_frequency),
+    ...state.scheduleTemplates.map((template) => template.frequency),
+    ...state.monitoringTemplatesDb.map((template) => template.default_frequency)
+  ]);
 }
 
 function userProfileOptions() {
@@ -5098,6 +6350,17 @@ function productLineOptions() {
   return state.productLines.map((item) => ({ value: item.id, label: item.product_name }));
 }
 
+function planOptions() {
+  return state.plans.map((item) => ({ value: item.id, label: item.plan_title }));
+}
+
+function allPlanItemOptions() {
+  return state.planItems.map((item) => ({
+    value: item.id,
+    label: `${item.category || item.objective || "Plan item"} - ${planTitle(item.plan_id)}`
+  }));
+}
+
 function categoryOptions() {
   return state.monitoringCategories.map((item) => ({ value: item.id, label: item.category_name }));
 }
@@ -5165,6 +6428,11 @@ function sopStatusOptions() {
     { value: "active", label: "Active" },
     { value: "archived", label: "Archived" }
   ];
+}
+
+function sopSummaryReportStatusOptions() {
+  return ["draft", "generated", "reviewed", "approved", "archived"]
+    .map((value) => ({ value, label: formattedRoleLabel(value) }));
 }
 
 function permissionModules() {
@@ -5285,8 +6553,58 @@ function productLineNameRaw(id) {
   return item?.product_name || "";
 }
 
+function departmentName(id) {
+  return escapeHtml(departmentNameRaw(id) || "Not set");
+}
+
+function departmentNameRaw(id) {
+  const item = state.departments.find((record) => record.id === id);
+  return item?.department_name || "";
+}
+
+function personDepartmentName(personId) {
+  const person = state.peopleProfiles.find((record) => record.id === personId);
+  if (!person) return "";
+  return departmentNameRaw(person.department_id) || person.department || "";
+}
+
 function taskWorkspaceId(task) {
   return task?.workspace_id || task?.product_line_id || "";
+}
+
+function planItemForTask(task) {
+  if (!task) return null;
+  return state.planItems.find((item) => item.id === task.plan_item_id)
+    || state.planItems.find((item) => item.plan_id && item.plan_id === task.plan_id)
+    || null;
+}
+
+function planForTask(task) {
+  if (!task) return null;
+  const planItem = planItemForTask(task);
+  return state.plans.find((plan) => plan.id === (task.plan_id || planItem?.plan_id)) || null;
+}
+
+function sopForTask(task) {
+  if (!task) return null;
+  const workspaceId = taskWorkspaceId(task);
+  return state.standardOperatingProcedures.find((sop) => sop.id === task.sop_id)
+    || state.standardOperatingProcedures.find((sop) => sop.task_id === task.id)
+    || state.standardOperatingProcedures.find((sop) => task.template_id && sop.workflow_template_id === task.template_id)
+    || state.standardOperatingProcedures.find((sop) => workspaceId && sop.workspace_id === workspaceId)
+    || state.standardOperatingProcedures.find((sop) => task.plan_item_id && sop.plan_item_id === task.plan_item_id)
+    || state.standardOperatingProcedures.find((sop) => task.plan_id && sop.plan_id === task.plan_id)
+    || null;
+}
+
+function taskComplianceStatus(task) {
+  if (!task) return "not_linked";
+  const checks = state.taskCheckRecords.filter((record) => record.task_id === task.id);
+  const actions = state.actionCases.filter((record) => record.task_id === task.id);
+  if (checks.some((record) => ["not_compliant", "needs_follow_up", "failed"].includes(record.check_result))) return "not_compliant";
+  if (actions.some((record) => !["resolved", "verified", "closed"].includes(record.case_status))) return "open_action";
+  if (checks.some((record) => record.check_result === "passed")) return "compliant";
+  return taskDisplayStatus(task);
 }
 
 function tableHasColumn(records, columnName) {
@@ -5301,6 +6619,11 @@ function categoryName(id) {
 function categoryNameRaw(id) {
   const item = state.monitoringCategories.find((record) => record.id === id);
   return item?.category_name || "";
+}
+
+function planTitle(id) {
+  const item = state.plans.find((record) => record.id === id);
+  return item?.plan_title || "Plan";
 }
 
 function taskName(id) {
@@ -5612,12 +6935,14 @@ window.openCheckModal = openCheckModal;
 window.openActionModal = openActionModal;
 window.openUserProfileModal = openUserProfileModal;
 window.openCompanySettingsModal = openCompanySettingsModal;
+window.openDepartmentModal = openDepartmentModal;
 window.openPeopleProfileModal = openPeopleProfileModal;
 window.openEmployeeDocumentModal = openEmployeeDocumentModal;
 window.selectPeopleProfile = selectPeopleProfile;
 window.openEquipmentModal = openEquipmentModal;
 window.openMaintenanceModal = openMaintenanceModal;
 window.openSopModal = openSopModal;
+window.openSopSummaryReportModal = openSopSummaryReportModal;
 window.openAttendanceModal = openAttendanceModal;
 window.openProductLineModal = openProductLineModal;
 window.openMonitoringCategoryModal = openMonitoringCategoryModal;
@@ -5661,6 +6986,7 @@ window.exportCheckCsv = exportCheckCsv;
 window.exportActionsCsv = exportActionsCsv;
 window.printPersonnelReport = printPersonnelReport;
 window.printSopReport = printSopReport;
+window.printSavedSopSummaryReport = printSavedSopSummaryReport;
 window.printPlansReport = printPlansReport;
 window.printDoReport = printDoReport;
 window.printCheckReport = printCheckReport;
