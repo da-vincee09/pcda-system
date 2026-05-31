@@ -1967,6 +1967,7 @@ function renderPlanDetails() {
   }
 
   const items = state.planItems.filter((item) => item.plan_id === plan.id);
+  const planSop = sopForPlan(plan.id);
   elements.planDetailsPanel.innerHTML = `
     <div class="detail-title">
       <div>
@@ -1980,6 +1981,7 @@ function renderPlanDetails() {
       <li><span>Period</span><strong>${formatPeriod(plan.period_month, plan.period_year)}</strong></li>
       <li><span>Start</span><strong>${formatDate(plan.start_date)}</strong></li>
       <li><span>End</span><strong>${formatDate(plan.end_date)}</strong></li>
+      <li><span>Related SOP</span><strong>${planSop ? escapeHtml(sopDisplayName(planSop)) : "Not linked"}</strong></li>
       <li><span>Created By</span><strong>${personName(plan.created_by)}</strong></li>
       <li><span>Approved By</span><strong>${personName(plan.approved_by)}</strong></li>
     </ul>
@@ -1990,6 +1992,7 @@ function renderPlanDetails() {
 }
 
 function renderPlanItemCard(item) {
+  const itemSop = sopForPlanItem(item.id) || sopForPlan(item.plan_id);
   const actions = canManagePlans()
     ? `<div class="table-actions">
         <button type="button" onclick="openPlanItemModal('${item.id}')">Edit</button>
@@ -2007,6 +2010,7 @@ function renderPlanItemCard(item) {
       </div>
       <p><strong>Activity Objective:</strong> ${escapeHtml(item.objective)}</p>
       <p><strong>Target Standard:</strong> ${escapeHtml(item.target_standard)}</p>
+      <p><strong>Related SOP:</strong> ${itemSop ? escapeHtml(sopDisplayName(itemSop)) : "Not linked"}</p>
       <p><strong>Responsible:</strong> ${personName(item.responsible_person)} | <strong>Frequency:</strong> ${escapeHtml(item.frequency)}</p>
       <p><strong>Expected Output:</strong> ${escapeHtml(item.expected_output)}</p>
       <p><strong>Due:</strong> ${formatDate(item.due_date)} | <strong>Remarks:</strong> ${escapeHtml(item.remarks)}</p>
@@ -3180,46 +3184,104 @@ async function handleSopSummaryReportSubmit(form) {
     return;
   }
 
-  const report = buildSopSummaryReportData(payload);
-  if (!report.sop) {
-    showToast("Selected SOP was not found.", "error");
-    return;
-  }
-
   setLoading(true);
-  const reportPayload = {
-    sop_id: payload.sop_id,
-    department_id: payload.department_id || report.sop.department_id || null,
-    workspace_id: payload.workspace_id || report.sop.workspace_id || null,
-    period_start: payload.period_start,
-    period_end: payload.period_end,
-    prepared_by: payload.prepared_by || null,
-    reviewed_by: payload.reviewed_by || null,
-    approved_by: payload.approved_by || null,
-    report_status: "generated",
-    total_activities: report.summary.totalActivities,
-    completed_activities: report.summary.completedActivities,
-    checked_activities: report.summary.checkedActivities,
-    passed_checks: report.summary.passedChecks,
-    failed_checks: report.summary.failedChecks,
-    non_compliant_activities: report.summary.nonCompliantActivities,
-    open_corrective_actions: report.summary.openCorrectiveActions,
-    closed_corrective_actions: report.summary.closedCorrectiveActions,
-    compliance_percentage: report.summary.compliancePercentage,
-    summary_snapshot: report.snapshot
-  };
+  try {
+    await refreshSopReportSourceData();
+    const report = buildSopSummaryReportData(payload);
+    if (!report.sop) {
+      showToast("Selected SOP was not found.", "error");
+      return;
+    }
 
-  const { error } = await db.from("sop_summary_reports").insert(reportPayload);
-  setLoading(false);
-  if (error) {
-    showToast(`Opening print dialog. Report history was not saved: ${error.message}`, "error");
-  } else {
-    showToast("SOP Summary Report generated. Choose Save as PDF in the print dialog.", "success");
+    const reportPayload = {
+      sop_id: payload.sop_id,
+      department_id: payload.department_id || report.sop.department_id || null,
+      workspace_id: payload.workspace_id || report.sop.workspace_id || null,
+      period_start: payload.period_start,
+      period_end: payload.period_end,
+      prepared_by: payload.prepared_by || null,
+      reviewed_by: payload.reviewed_by || null,
+      approved_by: payload.approved_by || null,
+      report_status: "generated",
+      total_activities: report.summary.totalActivities,
+      completed_activities: report.summary.completedActivities,
+      checked_activities: report.summary.checkedActivities,
+      passed_checks: report.summary.passedChecks,
+      failed_checks: report.summary.failedChecks,
+      non_compliant_activities: report.summary.nonCompliantActivities,
+      open_corrective_actions: report.summary.openCorrectiveActions,
+      closed_corrective_actions: report.summary.closedCorrectiveActions,
+      compliance_percentage: report.summary.compliancePercentage,
+      summary_snapshot: report.snapshot
+    };
+
+    const { data: savedReport, error } = await db.from("sop_summary_reports").insert(reportPayload).select("*").single();
+    if (error) {
+      showToast(`Opening print dialog. Report history was not saved: ${error.message}`, "error");
+    } else {
+      report.reportRecordId = savedReport?.id || "";
+      report.reportStatus = savedReport?.report_status || report.reportStatus;
+      report.generatedAt = savedReport?.generated_at || report.generatedAt;
+      showToast("SOP Summary Report generated from current Supabase records. Choose Save as PDF in the print dialog.", "success");
+    }
+
+    closeModal();
+    printSopSummaryReport(report);
+    await loadAllData();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setLoading(false);
   }
+}
 
-  closeModal();
-  printSopSummaryReport(report);
-  await loadAllData();
+async function refreshSopReportSourceData() {
+  const [
+    companySettings,
+    peopleProfiles,
+    departments,
+    productLines,
+    plans,
+    planItems,
+    scheduleTemplates,
+    generatedTasks,
+    taskDoRecords,
+    taskCheckRecords,
+    actionCases,
+    approvalRequests,
+    standardOperatingProcedures,
+    sopMonitoringLinks
+  ] = await Promise.all([
+    fetchTable("company_settings", "created_at", true),
+    fetchTable("people_profiles", "created_at", true),
+    fetchTable("departments", "department_name", false),
+    fetchTable("product_lines", "created_at", true),
+    fetchTable("plans", "created_at", true),
+    fetchTable("plan_items", "created_at", true),
+    fetchTable("monitoring_schedule_templates", "created_at", true),
+    fetchTable("generated_tasks", "created_at", true),
+    fetchTable("task_do_records", "created_at", true),
+    fetchTable("task_check_records", "created_at", true),
+    fetchTable("action_cases", "created_at", true),
+    fetchTable("approval_requests", "created_at", true),
+    fetchTable("standard_operating_procedures", "created_at", true),
+    fetchTable("sop_monitoring_links", "created_at", true)
+  ]);
+
+  state.companySettings = companySettings[0] || {};
+  state.peopleProfiles = peopleProfiles;
+  state.departments = departments;
+  state.productLines = productLines;
+  state.plans = plans;
+  state.planItems = planItems;
+  state.scheduleTemplates = scheduleTemplates;
+  state.generatedTasks = generatedTasks;
+  state.taskDoRecords = taskDoRecords;
+  state.taskCheckRecords = taskCheckRecords;
+  state.actionCases = actionCases;
+  state.approvalRequests = approvalRequests;
+  state.standardOperatingProcedures = standardOperatingProcedures;
+  state.sopMonitoringLinks = sopMonitoringLinks;
 }
 
 function buildSopSummaryReportData(payload) {
@@ -3246,6 +3308,7 @@ function buildSopSummaryReportData(payload) {
       || (selectedWorkspace && taskWorkspaceId(task) === selectedWorkspace)
       || (sop.plan_id && task.plan_id === sop.plan_id)
       || (sop.plan_item_id && task.plan_item_id === sop.plan_item_id)
+      || (sop.plan_id && planItemForTask(task)?.plan_id === sop.plan_id)
     ))
     .filter((task) => !selectedWorkspace || taskWorkspaceId(task) === selectedWorkspace || task.id === sop.task_id || task.sop_id === sop.id)
     .filter(taskInPeriod);
@@ -3282,8 +3345,8 @@ function buildSopSummaryReportData(payload) {
   const compliancePercentage = totalActivities ? Math.max(0, Math.round(((totalActivities - nonCompliantActivities) / totalActivities) * 10000) / 100) : 0;
   const traceabilityRows = tasks.map((task) => ({
     task,
-    plan: planForTask(task),
-    planItem: planItemForTask(task),
+    plan: planForTask(task) || sopPlan(sop),
+    planItem: planItemForTask(task) || sopPlanItem(sop),
     workspace: state.productLines.find((item) => item.id === taskWorkspaceId(task)) || null,
     sop: sopForTask(task) || sop,
     doRecords: doRecords.filter((record) => record.task_id === task.id),
@@ -3313,6 +3376,9 @@ function buildSopSummaryReportData(payload) {
     preparedBy: payload.prepared_by,
     reviewedBy: payload.reviewed_by,
     approvedBy: payload.approved_by,
+    reportRecordId: payload.report_id || "",
+    reportStatus: payload.report_status || "generated",
+    generatedAt: payload.generated_at || new Date().toISOString(),
     templates,
     tasks,
     traceabilityRows,
@@ -3335,7 +3401,7 @@ function buildSopSummaryReportData(payload) {
         sop: row.sop ? sopDisplayName(row.sop) : "",
         compliance_status: row.complianceStatus
       })),
-      generated_at: new Date().toISOString(),
+      generated_at: payload.generated_at || new Date().toISOString(),
       summary
     }
   };
@@ -3344,14 +3410,12 @@ function buildSopSummaryReportData(payload) {
 function printSopSummaryReport(report) {
   const company = state.companySettings || {};
   const sop = report.sop;
-  const preparedBy = peopleNameRaw(report.preparedBy) || peopleNameRaw(sop.owner_person_id) || "";
-  const reviewedBy = peopleNameRaw(report.reviewedBy) || "";
-  const approvedBy = peopleNameRaw(report.approvedBy) || peopleNameRaw(sop.approved_by) || "";
+  const approvalInfo = sopSummaryApprovalInfo(report);
   const productLine = productLineNameRaw(report.workspaceId) || "All workspaces";
   const department = departmentNameRaw(report.departmentId) || sop.department || "All departments";
   const docCode = `${sop.sop_code || "SOP"}-SUMMARY`;
-  const effectivityDate = formatDate(sop.effective_date || new Date().toISOString());
-  const generatedDate = formatDate(toDateInputValue(new Date()));
+  const effectivityDate = formatReportDate(sop.effective_date, "Not set");
+  const generatedDate = formatReportDateTime(report.generatedAt, "Not generated");
   printHtmlReport("SOP Summary Report", `
     <section class="sop-summary-document">
       <table class="document-control-table">
@@ -3379,7 +3443,7 @@ function printSopSummaryReport(report) {
           <tr>
             <th>Document Title:</th>
             <td>${escapeHtml("SOP Summary Report")}</td>
-            <td>Page 1</td>
+            <td>Auto-paginated</td>
           </tr>
           <tr>
             <th>SOP Reference:</th>
@@ -3388,82 +3452,270 @@ function printSopSummaryReport(report) {
         </tbody>
       </table>
 
-      <table class="review-signature-table">
-        <tbody>
-          <tr><th>Prepared & Reviewed by:</th><th>Approved by:</th></tr>
-          <tr>
-            <td>
-              <strong>${escapeHtml([preparedBy, reviewedBy].filter(Boolean).join(" / ") || "________________________")}</strong>
-              <span>${escapeHtml(peoplePosition(report.preparedBy) || peoplePosition(report.reviewedBy) || "")}</span>
-              <em>DATE: ${escapeHtml(generatedDate)}</em>
-            </td>
-            <td>
-              <strong>${escapeHtml(approvedBy || "________________________")}</strong>
-              <span>${escapeHtml(peoplePosition(report.approvedBy) || peoplePosition(sop.approved_by) || "")}</span>
-              <em>DATE: ${escapeHtml(generatedDate)}</em>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
       <div class="report-period-block">
-        <p><strong>Period Covered:</strong> ${escapeHtml(`${formatDate(report.periodStart)} to ${formatDate(report.periodEnd)}`)}</p>
+        <p><strong>Period Covered:</strong> ${escapeHtml(`${formatReportDate(report.periodStart)} to ${formatReportDate(report.periodEnd)}`)}</p>
         <p><strong>Product Lines:</strong> ${escapeHtml(productLine)}</p>
         <p><strong>Department:</strong> ${escapeHtml(department)}</p>
+        <p><strong>Report Generated:</strong> ${escapeHtml(generatedDate)}</p>
       </div>
+
+      ${buildSopApprovalPrintSection(report, approvalInfo)}
 
       ${buildSopTraceabilityPrintSection(report)}
 
       ${buildSopSummaryPrintSections(report)}
 
-      <h2>SOP Compliance Summary</h2>
-      <table class="print-standard-table compliance-summary-table">
-        <tbody>
-          <tr><th>Total Monitoring Activities</th><td>${report.summary.totalActivities}</td><th>Completed Activities</th><td>${report.summary.completedActivities}</td></tr>
-          <tr><th>Checked Activities</th><td>${report.summary.checkedActivities}</td><th>Passed / Failed Checks</th><td>${report.summary.passedChecks} / ${report.summary.failedChecks}</td></tr>
-          <tr><th>Non-Compliant Activities</th><td>${report.summary.nonCompliantActivities}</td><th>Overall Compliance</th><td>${report.summary.compliancePercentage}%</td></tr>
-          <tr><th>Open Corrective Actions</th><td>${report.summary.openCorrectiveActions}</td><th>Closed Corrective Actions</th><td>${report.summary.closedCorrectiveActions}</td></tr>
-          <tr><th>Monitoring Activities</th><td>${report.summary.nonCompliantActivities ? "Non-Compliant" : "Compliant"}</td><th>Verification</th><td>${report.checkRecords.some((record) => record.check_result === "not_compliant") ? "Failed" : "Passed"}</td></tr>
-        </tbody>
-      </table>
+      ${buildSopExecutiveSummary(report)}
+
+      ${buildSopComplianceConclusion(report)}
     </section>
   `, "sop-summary-print");
 }
 
+function sopSummaryApprovalInfo(report) {
+  const relatedIds = [report.reportRecordId, report.sop?.id].filter(Boolean);
+  const requests = state.approvalRequests.filter((request) => (
+    (request.related_table === "sop_summary_reports" && relatedIds.includes(request.related_record_id))
+    || (request.related_table === "standard_operating_procedures" && request.related_record_id === report.sop?.id)
+  ));
+  const latest = requests.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))[0];
+  const approvedRequest = requests.find((request) => request.approval_status === "approved" && request.decided_at);
+  const statusValue = latest?.approval_status || report.reportStatus || "generated";
+  const approvalStatus = sopApprovalStatusLabel(statusValue, Boolean(approvedRequest || report.sop?.approved_at));
+  const approvalDate = approvedRequest?.decided_at
+    || (approvalStatus === "Approved" ? report.sop?.approved_at : "")
+    || "";
+
+  return {
+    approvalStatus,
+    approvalDate: formatReportDateTime(approvalDate, "Not yet approved"),
+    approver: peopleNameRaw(latest?.approver_person_id) || peopleNameRaw(report.approvedBy) || peopleNameRaw(report.sop?.approved_by) || "Not assigned",
+    reviewStatus: sopReviewStatusLabel(report.reportStatus, latest?.approval_status),
+    approvalNote: latest?.approval_note || "",
+    requestNote: latest?.request_note || "",
+    requestCount: requests.length,
+    approvedRequest
+  };
+}
+
+function sopApprovalStatusLabel(status, hasApprovedDate = false) {
+  const value = String(status || "").toLowerCase();
+  if (value === "approved" || hasApprovedDate) return "Approved";
+  if (value === "rejected") return "Rejected";
+  if (value === "cancelled" || value === "canceled") return "Cancelled";
+  if (value === "pending") return "Pending Approval";
+  if (value === "reviewed") return "Reviewed";
+  if (value === "draft") return "Draft";
+  return "Pending Review";
+}
+
+function sopReviewStatusLabel(reportStatus, approvalStatus) {
+  const reportValue = String(reportStatus || "").toLowerCase();
+  const approvalValue = String(approvalStatus || "").toLowerCase();
+  if (approvalValue === "approved" || reportValue === "approved") return "Approved";
+  if (approvalValue === "rejected") return "Rejected";
+  if (approvalValue === "pending") return "Pending Approval";
+  if (reportValue === "reviewed") return "Reviewed";
+  if (reportValue === "draft") return "Draft";
+  return "Pending Review";
+}
+
+function buildSopApprovalPrintSection(report, approvalInfo) {
+  const approvalRows = sopApprovalRoleRows(report, approvalInfo);
+  return `
+    <section class="approval-print-section compliance-summary">
+      <h2>Approval and Review Control</h2>
+      <table class="print-standard-table approval-print-table">
+        <thead>
+          <tr>
+            <th>Responsibility</th>
+            <th>Name / Position</th>
+            <th>Status / Date</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${approvalRows.map((row) => `
+            <tr>
+              <th>${escapeHtml(row.roles.join(" and "))}</th>
+              <td>${printDetailList([row.name, row.position])}</td>
+              <td>${printDetailList(row.statusLines)}</td>
+              <td>${escapeHtml(row.notes || "No notes recorded")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </section>
+  `;
+}
+
+function sopApprovalRoleRows(report, approvalInfo) {
+  const generatedDate = formatReportDateTime(report.generatedAt, "Not generated");
+  const roles = [
+    {
+      role: "Prepared By",
+      personId: report.preparedBy || report.sop?.owner_person_id || "",
+      fallback: peopleNameRaw(report.preparedBy) || peopleNameRaw(report.sop?.owner_person_id) || "Not assigned",
+      statusLines: [`Date: ${generatedDate}`],
+      notes: "Report preparation record"
+    },
+    {
+      role: "Reviewed By",
+      personId: report.reviewedBy || "",
+      fallback: peopleNameRaw(report.reviewedBy) || "Not assigned",
+      statusLines: [`Status: ${approvalInfo.reviewStatus}`],
+      notes: approvalInfo.requestNote || "Review status from approval workflow"
+    },
+    {
+      role: "Approved By",
+      personId: report.approvedBy || report.sop?.approved_by || "",
+      fallback: approvalInfo.approver || "Not assigned",
+      statusLines: [`Status: ${approvalInfo.approvalStatus}`, `Date: ${approvalInfo.approvalDate}`],
+      notes: approvalInfo.approvalNote || approvalInfo.requestNote || "Approval status from approval workflow"
+    }
+  ];
+  const grouped = new Map();
+  roles.forEach((item) => {
+    const key = item.personId || `${item.role}:${item.fallback}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        roles: [],
+        name: item.fallback,
+        position: peoplePosition(item.personId) || "",
+        statusLines: [],
+        notes: []
+      });
+    }
+    const record = grouped.get(key);
+    record.roles.push(item.role.replace(" By", ""));
+    record.statusLines.push(...item.statusLines);
+    if (item.notes) record.notes.push(item.notes);
+  });
+  return Array.from(grouped.values()).map((item) => ({
+    ...item,
+    notes: uniqueLabels(item.notes).join(" | ")
+  }));
+}
+
+function buildSopExecutiveSummary(report) {
+  const status = !report.summary.checkedActivities
+    ? "Pending Verification"
+    : report.summary.nonCompliantActivities > 0 || report.summary.failedChecks > 0
+    ? "Non-Compliant"
+    : "Compliant";
+  return `
+    <section class="sop-executive-summary">
+      <h2>Executive Compliance Summary</h2>
+      <div class="sop-summary-cards">
+        <article class="${status === "Non-Compliant" ? "is-alert" : status === "Compliant" ? "is-good" : "is-pending"}">
+          <span>Overall Compliance</span>
+          <strong>${escapeHtml(`${report.summary.compliancePercentage}%`)}</strong>
+          <em>${escapeHtml(status)}</em>
+        </article>
+        <article><span>Overall Status</span><strong>${escapeHtml(status)}</strong><em>Based on verification records</em></article>
+        <article><span>Monitoring Activities</span><strong>${report.summary.totalActivities}</strong><em>Total in period</em></article>
+        <article><span>Passed</span><strong>${report.summary.passedChecks}</strong><em>Verified compliant</em></article>
+        <article><span>Failed / Follow-Up</span><strong>${report.summary.failedChecks}</strong><em>Requires attention</em></article>
+        <article><span>Corrective Actions Open</span><strong>${report.summary.openCorrectiveActions}</strong><em>Action center</em></article>
+        <article><span>Corrective Actions Closed</span><strong>${report.summary.closedCorrectiveActions}</strong><em>Resolved / verified</em></article>
+      </div>
+    </section>
+  `;
+}
+
+function buildSopComplianceConclusion(report) {
+  const status = !report.summary.checkedActivities
+    ? "Pending Verification"
+    : report.summary.nonCompliantActivities > 0 || report.summary.failedChecks > 0
+    ? "Non-Compliant"
+    : "Compliant";
+  const openActions = report.summary.openCorrectiveActions;
+  const failedChecks = report.summary.failedChecks;
+  const reasons = [
+    !report.summary.checkedActivities ? "No verification record has been completed for the selected reporting period." : "",
+    failedChecks ? `${failedChecks} failed or follow-up verification record${failedChecks === 1 ? "" : "s"} identified.` : "",
+    openActions ? `${openActions} corrective action case${openActions === 1 ? "" : "s"} remain open.` : "",
+    report.summary.checkedActivities && !failedChecks && !openActions ? "All completed verification records were compliant for the selected reporting period." : ""
+  ].filter(Boolean);
+  const recommendation = status === "Compliant"
+    ? "Maintain the current SOP implementation and continue scheduled monitoring."
+    : status === "Pending Verification"
+    ? "Complete supervisor verification before closing the monitoring period."
+    : openActions
+    ? "Complete corrective actions, verify effectiveness, and close the action cases before final closure."
+    : "Review failed findings and document corrective or preventive action before closing the monitoring period.";
+  return `
+    <section class="sop-conclusion">
+      <h2>SOP Compliance Conclusion</h2>
+      <table class="print-standard-table sop-conclusion-table">
+        <tbody>
+          <tr>
+            <th>Status</th>
+            <td>${escapeHtml(status)}</td>
+            <th>Open Corrective Actions</th>
+            <td>${escapeHtml(String(openActions))}</td>
+          </tr>
+          <tr>
+            <th>Reason</th>
+            <td colspan="3">${printDetailList(reasons)}</td>
+          </tr>
+          <tr>
+            <th>Recommendation</th>
+            <td colspan="3">${escapeHtml(recommendation)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  `;
+}
+
 function buildSopTraceabilityPrintSection(report) {
   const rows = report.traceabilityRows?.length
-    ? report.traceabilityRows.map((row) => `
+    ? report.traceabilityRows.map((row) => {
+      const template = templateForTask(row.task);
+      const plan = row.plan || planForTemplate(template) || sopPlan(row.sop || report.sop);
+      const planItemTitle = row.planItem?.category || row.planItem?.objective || template?.template_title || "";
+      const objective = row.planItem?.objective || template?.objective || row.task?.task_title || "";
+      const targetStandard = row.planItem?.target_standard || template?.target_standard || "";
+      const expectedOutput = row.planItem?.expected_output || template?.expected_output || "";
+      const frequency = row.planItem?.frequency || template?.frequency || "";
+      return `
       <tr>
-        <td>${printDetailLines([
-          row.plan?.plan_title || "Not linked",
-          row.plan ? formatPeriod(row.plan.period_month, row.plan.period_year) : ""
+        <td>${printDetailList([
+          plan?.plan_title ? `Plan Name: ${plan.plan_title}` : "Plan Name: No linked plan record",
+          plan?.description ? `Plan Description: ${plan.description}` : "",
+          plan ? `Plan Period: ${formatPeriod(plan.period_month, plan.period_year)}` : "",
+          plan?.status ? `Plan Status: ${formattedRoleLabel(plan.status)}` : "",
+          planItemTitle ? `Plan Item / Template: ${planItemTitle}` : "Plan Item / Template: No linked record",
+          objective ? `Objective: ${objective}` : "",
+          targetStandard ? `Target Standard: ${targetStandard}` : "",
+          expectedOutput ? `Expected Output: ${expectedOutput}` : "",
+          frequency ? `Frequency: ${frequency}` : ""
         ])}</td>
-        <td>${printDetailLines([
-          row.planItem?.objective || row.planItem?.category || "Not linked",
-          row.planItem?.target_standard ? `Standard: ${row.planItem.target_standard}` : "",
-          row.planItem?.expected_output ? `Output: ${row.planItem.expected_output}` : ""
-        ])}</td>
-        <td>${escapeHtml(row.workspace?.product_name || "Not linked")}</td>
-        <td>${printDetailLines([
-          row.task?.task_title,
+        <td>${printDetailList([
+          row.workspace?.product_name ? `Workspace: ${row.workspace.product_name}` : "Workspace: No linked workspace",
+          row.task?.task_title ? `Task: ${row.task.task_title}` : "Task: No linked task",
           row.task?.assigned_person_id ? `Assigned: ${peopleNameRaw(row.task.assigned_person_id)}` : "",
-          row.task?.task_date ? `Schedule: ${formatDate(row.task.task_date)} ${row.task.due_time || ""}` : "",
+          row.task?.task_date ? `Schedule: ${formatReportDate(row.task.task_date)} ${row.task.due_time || ""}` : "",
+          row.task?.priority ? `Priority: ${formattedRoleLabel(row.task.priority)}` : "",
           `Status: ${formattedRoleLabel(taskDisplayStatus(row.task))}`
         ])}</td>
-        <td>${printDetailLines([
-          row.sop ? `${row.sop.sop_code || "SOP"} - ${row.sop.title || "Untitled SOP"}` : "Not linked",
+        <td>${printDetailList([
+          row.sop ? `${row.sop.sop_code || "SOP"} - ${row.sop.title || "Untitled SOP"}` : "No linked SOP",
           row.sop?.version ? `Version: ${row.sop.version}` : "",
-          row.sop?.effective_date ? `Effective: ${formatDate(row.sop.effective_date)}` : ""
+          row.sop?.effective_date ? `Effective: ${formatReportDate(row.sop.effective_date)}` : "",
+          row.sop?.review_date ? `Review: ${formatReportDate(row.sop.review_date)}` : ""
         ])}</td>
-        <td>${printDetailLines([
-          `DO: ${row.doRecords.length}`,
-          `CHECK: ${row.checkRecords.length}`,
-          `ACTION: ${row.actionCases.length}`,
-          `Compliance: ${formattedRoleLabel(row.complianceStatus)}`
+        <td>${printDetailList([
+          `Execution Records: ${row.doRecords.length}`,
+          `Verification Records: ${row.checkRecords.length}`,
+          `Corrective Actions: ${row.actionCases.length}`,
+          `Compliance Status: ${formattedRoleLabel(row.complianceStatus)}`
         ])}</td>
       </tr>
-    `).join("")
-    : '<tr><td colspan="6">No linked workspace tasks found for this SOP and period.</td></tr>';
+    `;
+    }).join("")
+    : '<tr><td colspan="4">No linked workspace tasks found for this SOP and period.</td></tr>';
 
   return `
     <section class="traceability-print-section">
@@ -3471,10 +3723,8 @@ function buildSopTraceabilityPrintSection(report) {
       <table class="print-standard-table traceability-print-table">
         <thead>
           <tr>
-            <th>Plan</th>
-            <th>Plan Item</th>
-            <th>Workspace</th>
-            <th>Workspace Task</th>
+            <th>Plan / Plan Item</th>
+            <th>Workspace / Task</th>
             <th>SOP</th>
             <th>Evidence</th>
           </tr>
@@ -3485,7 +3735,17 @@ function buildSopTraceabilityPrintSection(report) {
   `;
 }
 
-function printSavedSopSummaryReport(reportId) {
+async function printSavedSopSummaryReport(reportId) {
+  setLoading(true);
+  try {
+    await refreshSopReportSourceData();
+  } catch (error) {
+    showToast(error.message, "error");
+    setLoading(false);
+    return;
+  }
+  setLoading(false);
+
   const savedReport = state.sopSummaryReports.find((item) => item.id === reportId);
   if (!savedReport) {
     showToast("SOP Summary Report record was not found.", "error");
@@ -3499,7 +3759,10 @@ function printSavedSopSummaryReport(reportId) {
     period_end: savedReport.period_end,
     prepared_by: savedReport.prepared_by || "",
     reviewed_by: savedReport.reviewed_by || "",
-    approved_by: savedReport.approved_by || ""
+    approved_by: savedReport.approved_by || "",
+    report_id: savedReport.id,
+    report_status: savedReport.report_status || "generated",
+    generated_at: savedReport.generated_at || savedReport.created_at || ""
   });
   if (!report.sop) {
     showToast("The SOP linked to this report no longer exists.", "error");
@@ -3511,7 +3774,7 @@ function printSavedSopSummaryReport(reportId) {
 function buildSopSummaryPrintSections(report) {
   const sections = report.templates.length
     ? report.templates
-    : [{ id: "", template_title: "SOP Monitoring Records", frequency: "Based on linked workspace tasks", product_line_id: report.workspaceId }];
+    : [{ id: "", template_title: report.sop?.title || report.sop?.sop_code || "SOP", frequency: "", product_line_id: report.workspaceId }];
 
   return sections.map((template, index) => {
     const tasks = report.tasks.filter((task) => !template.id || task.template_id === template.id);
@@ -3523,84 +3786,210 @@ function buildSopSummaryPrintSections(report) {
       ...tasks.map((task) => peopleNameRaw(task.assigned_person_id)),
       ...doRecords.map((record) => peopleNameRaw(record.performed_by))
     ].filter(Boolean)).join(", ") || "Not assigned";
-    const verifiedBy = uniqueLabels(checkRecords.map((record) => peopleNameRaw(record.checked_by)).filter(Boolean)).join(", ") || "Not yet verified";
-    const rows = doRecords.length
-      ? doRecords.map((record) => {
-        const task = state.generatedTasks.find((item) => item.id === record.task_id);
-        const check = checkRecords.find((item) => item.do_record_id === record.id || item.task_id === record.task_id);
-        const action = actionCases.find((item) => item.task_id === record.task_id || item.check_record_id === check?.id);
-        const approvedBy = peopleNameRaw(task?.approved_by) || peopleNameRaw(report.approvedBy);
-        return `
-          <tr>
-            <td><strong>${escapeHtml(formatDateTime(record.performed_at))}</strong><span>${escapeHtml(taskName(record.task_id))}</span></td>
-            <td>${printDetailLines([record.work_done])}</td>
-            <td>${printDetailLines([
-              check?.check_result ? formattedRoleLabel(check.check_result) : "",
-              check?.observation,
-              check?.remarks
-            ])}</td>
-            <td>${printDetailLines([
-              action?.manager_instruction,
-              action?.corrective_action,
-              action?.preventive_action,
-              action?.remarks,
-              record.output_result,
-              record.remarks
-            ])}</td>
-            <td>${printDetailLines([
-              peopleNameRaw(check?.checked_by) || verifiedBy,
-              check?.checked_at ? `Checked ${formatDateTime(check.checked_at)}` : "",
-              approvedBy ? `Approved by ${approvedBy}` : "",
-              task?.approval_status && task.approval_status !== "not_required" ? `Approval ${formattedRoleLabel(task.approval_status)}` : ""
-            ])}</td>
-          </tr>
-        `;
+    const rows = tasks.length
+      ? tasks.map((task, taskIndex) => {
+        const taskDoRecords = doRecords.filter((record) => record.task_id === task.id);
+        const records = taskDoRecords.length ? taskDoRecords : [null];
+        return records.map((record, recordIndex) => buildSopActivityBlock(task, record, checkRecords, actionCases, report.sop, taskIndex + 1, recordIndex + 1)).join("");
       }).join("")
-      : tasks.map((task) => `
-          <tr>
-            <td><strong>${escapeHtml(formatDate(task.task_date))}</strong><span>${escapeHtml(task.task_title)}</span></td>
-            <td>${escapeHtml("")}</td>
-            <td>${printDetailLines([formattedRoleLabel(taskDisplayStatus(task))])}</td>
-            <td>${printDetailLines([
-              task.priority,
-              task.remarks || template.objective || "",
-            ])}</td>
-            <td>${printDetailLines([
-              verifiedBy,
-              peopleNameRaw(task.approved_by) ? `Approved by ${peopleNameRaw(task.approved_by)}` : "",
-              task.approval_status && task.approval_status !== "not_required" ? `Approval ${formattedRoleLabel(task.approval_status)}` : ""
-            ])}</td>
-          </tr>
-        `).join("") || '<tr><td colspan="5">No monitoring records found for this section and period.</td></tr>';
+      : '<div class="sop-empty-record">No linked task records found for this SOP and period.</div>';
 
     return `
       <section class="monitoring-report-section">
         <h2>${index + 1}. ${escapeHtml(template.template_title || template.category || "Monitoring Activity")}</h2>
-        <p><strong>Frequency:</strong> ${escapeHtml(template.frequency || "Not set")}</p>
+        ${template.frequency ? `<p><strong>Frequency:</strong> ${escapeHtml(template.frequency)}</p>` : ""}
         <p><strong>Personnel:</strong> ${escapeHtml(personnel)}</p>
-        <p><strong>Verified by:</strong> ${escapeHtml(verifiedBy)}</p>
-        <table class="print-standard-table">
-          <colgroup>
-            <col class="summary-col-activity">
-            <col class="summary-col-done">
-            <col class="summary-col-result">
-            <col class="summary-col-remarks">
-            <col class="summary-col-verified">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Date / Monitoring Activity</th>
-              <th>Activity Done</th>
-              <th>Result</th>
-              <th>Remarks / Findings</th>
-              <th>Verified By</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+        <div class="sop-record-list">${rows}</div>
       </section>
     `;
   }).join("");
+}
+
+function buildSopActivityBlock(task, doRecord, checkRecords, actionCases, reportSop, taskNumber, recordNumber) {
+  const check = doRecord
+    ? checkRecords.find((item) => item.do_record_id === doRecord.id || item.task_id === task.id)
+    : checkRecords.find((item) => item.task_id === task.id);
+  const relatedActions = actionCases.filter((item) => item.task_id === task.id || item.check_record_id === check?.id);
+  const activityDate = doRecord?.performed_at || task.task_date || task.due_at || task.created_at;
+  const template = templateForTask(task);
+  const plan = planForTask(task) || planForTemplate(template) || sopPlan(reportSop);
+  const planItem = planItemForTask(task) || sopPlanItem(reportSop);
+  const workspace = state.productLines.find((item) => item.id === taskWorkspaceId(task)) || null;
+  const sop = sopForTask(task) || reportSop;
+  const activityName = planItem?.objective || planItem?.category || template?.template_title || task.task_title || "Monitoring activity";
+  const targetStandard = planItem?.target_standard || template?.target_standard || "No target standard recorded";
+  const expectedOutput = planItem?.expected_output || template?.expected_output || "No expected output recorded";
+  const frequency = planItem?.frequency || template?.frequency || "No frequency recorded";
+
+  return `
+    <article class="sop-record-card">
+      <header class="sop-record-header">
+        <strong>Monitoring Record ${escapeHtml(`${taskNumber}.${recordNumber}`)} - ${escapeHtml(activityName)}</strong>
+        <span>${escapeHtml(sopReportResultLabel(check))}</span>
+      </header>
+
+      <table class="print-standard-table sop-record-meta">
+        <tbody>
+          <tr>
+            <th>Plan</th>
+            <td>${escapeHtml(plan?.plan_title || "No linked plan record")}</td>
+            <th>Plan Item / Template</th>
+            <td>${escapeHtml(activityName)}</td>
+          </tr>
+          <tr>
+            <th>Workspace</th>
+            <td>${escapeHtml(workspace?.product_name || "No linked workspace")}</td>
+            <th>SOP</th>
+            <td>${escapeHtml(sop ? sopDisplayName(sop) : "No linked SOP")}</td>
+          </tr>
+          <tr>
+            <th>Task</th>
+            <td>${escapeHtml(task.task_title || "No task title available")}</td>
+            <th>Schedule</th>
+            <td>${escapeHtml([activityDate ? formatReportDateTime(activityDate) : "", task.due_time ? `Due ${task.due_time}` : ""].filter(Boolean).join(" | ") || "Not scheduled")}</td>
+          </tr>
+          <tr>
+            <th>Assigned Personnel</th>
+            <td>${escapeHtml(peopleNameRaw(task.assigned_person_id) || "Not assigned")}</td>
+            <th>Task Status</th>
+            <td>${escapeHtml(formattedRoleLabel(taskDisplayStatus(task)))}</td>
+          </tr>
+          <tr>
+            <th>Target Standard</th>
+            <td>${escapeHtml(targetStandard)}</td>
+            <th>Expected Output</th>
+            <td>${escapeHtml(expectedOutput)}</td>
+          </tr>
+          <tr>
+            <th>Frequency</th>
+            <td>${escapeHtml(frequency)}</td>
+            <th>Priority</th>
+            <td>${escapeHtml(formattedRoleLabel(task.priority || "normal"))}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="sop-pdca-grid">
+        <section class="monitoring-record">
+          <h3>Monitoring Activity</h3>
+          ${printDetailList([
+            plan?.plan_title ? `Plan: ${plan.plan_title}` : "Plan: No linked plan",
+            plan?.description ? `Purpose: ${plan.description}` : "",
+            `Activity: ${activityName}`,
+            targetStandard ? `Target standard: ${targetStandard}` : "",
+            expectedOutput ? `Expected output: ${expectedOutput}` : "",
+            workspace?.product_name ? `Where: ${workspace.product_name}` : "Where: Workspace not linked",
+            sop ? `Procedure: ${sopDisplayName(sop)}` : "Procedure: SOP not linked"
+          ])}
+        </section>
+        <section class="monitoring-record">
+          <h3>Execution Summary</h3>
+          ${printDetailList(sopReportDoDetails(doRecord))}
+        </section>
+        <section class="findings-section">
+          <h3>Findings</h3>
+          ${printDetailList(sopReportFindings(check, relatedActions))}
+        </section>
+        <section class="compliance-summary">
+          <h3>Verification Result</h3>
+          ${printDetailList([
+            `Result: ${sopReportResultLabel(check)}`,
+            ...sopReportVerificationDetails(check)
+          ])}
+        </section>
+        <section class="corrective-action-section">
+          <h3>Corrective Actions</h3>
+          ${printDetailList([
+            ...sopReportManagerInstructions(relatedActions),
+            ...sopReportCorrectiveActions(relatedActions)
+          ])}
+        </section>
+        <section class="preventive-action-section">
+          <h3>Preventive Actions</h3>
+          ${printDetailList([
+            ...sopReportPreventiveActions(relatedActions)
+          ])}
+        </section>
+      </div>
+    </article>
+  `;
+}
+
+function sopReportDoDetails(doRecord) {
+  if (!doRecord) return ["No DO record submitted"];
+  return [
+    doRecord.performed_by ? `Performed by: ${peopleNameRaw(doRecord.performed_by)}` : "",
+    doRecord.performed_at ? `Performed at: ${formatReportDateTime(doRecord.performed_at)}` : "",
+    doRecord.work_done ? `Work done: ${doRecord.work_done}` : "",
+    doRecord.output_result ? `Output result: ${doRecord.output_result}` : "",
+    doRecord.remarks ? `DO remarks: ${doRecord.remarks}` : "",
+    doRecord.evidence_url ? `Evidence: ${doRecord.evidence_url}` : "",
+    doRecord.evidence_note ? `Evidence note: ${doRecord.evidence_note}` : ""
+  ];
+}
+
+function sopReportResultLabel(checkRecord) {
+  const result = String(checkRecord?.check_result || "").toLowerCase();
+  if (result === "passed") return "Compliant";
+  if (result === "not_compliant") return "Non-Compliant";
+  if (result === "needs_follow_up") return "Needs Follow-Up";
+  return "Not yet checked";
+}
+
+function sopReportFindings(checkRecord, actionRecords = []) {
+  const result = String(checkRecord?.check_result || "").toLowerCase();
+  const status = result === "not_compliant"
+    ? "Open finding"
+    : result === "needs_follow_up"
+    ? "Requires follow-up"
+    : result === "passed"
+    ? "Closed - compliant"
+    : "Pending verification";
+  const impact = result === "not_compliant"
+    ? "Potential SOP non-compliance requiring corrective action review."
+    : result === "needs_follow_up"
+    ? "Requires additional verification before closure."
+    : result === "passed"
+    ? "No adverse compliance impact recorded."
+    : "Impact cannot be confirmed until verification is completed.";
+  const values = [
+    checkRecord?.observation ? `Finding: ${checkRecord.observation}` : "",
+    `Impact: ${impact}`,
+    checkRecord?.remarks ? `Verification remarks: ${checkRecord.remarks}` : "",
+    `Finding status: ${status}`
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  return values.length ? values : ["No findings recorded"];
+}
+
+function sopReportManagerInstructions(actionRecords = []) {
+  const values = actionRecords.flatMap((action) => [
+    action.non_compliance_note ? `Non-compliance: ${action.non_compliance_note}` : "",
+    action.manager_instruction ? `Manager instruction: ${action.manager_instruction}` : "",
+    action.case_status ? `Case status: ${formattedRoleLabel(action.case_status)}` : "",
+    action.due_at ? `Due: ${formatReportDateTime(action.due_at)}` : "",
+    action.resolved_at ? `Resolved: ${formatReportDateTime(action.resolved_at)}` : ""
+  ]);
+  return values.some((value) => String(value || "").trim()) ? values : ["No manager instruction recorded"];
+}
+
+function sopReportCorrectiveActions(actionRecords = []) {
+  const values = actionRecords.map((action) => action.corrective_action ? `Corrective action: ${action.corrective_action}` : "");
+  return values.some((value) => String(value || "").trim()) ? values : ["No corrective action recorded"];
+}
+
+function sopReportPreventiveActions(actionRecords = []) {
+  const values = actionRecords.map((action) => action.preventive_action ? `Preventive action: ${action.preventive_action}` : "");
+  return values.some((value) => String(value || "").trim()) ? values : ["No preventive action recorded"];
+}
+
+function sopReportVerificationDetails(checkRecord) {
+  if (!checkRecord) return ["Not yet verified"];
+  return [
+    checkRecord.checked_by ? `Checked by: ${peopleNameRaw(checkRecord.checked_by)}` : "",
+    checkRecord.checked_at ? `Checked at: ${formatReportDateTime(checkRecord.checked_at)}` : "",
+    checkRecord.evidence_url ? `Evidence: ${checkRecord.evidence_url}` : "",
+    checkRecord.correction_due_at ? `Correction due: ${formatReportDateTime(checkRecord.correction_due_at)}` : ""
+  ];
 }
 
 function printDetailLines(values = []) {
@@ -3609,6 +3998,14 @@ function printDetailLines(values = []) {
     .filter(Boolean);
   if (!items.length) return "";
   return items.map((item) => `<span class="print-detail-line">${escapeHtml(item)}</span>`).join("");
+}
+
+function printDetailList(values = []) {
+  const items = values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  if (!items.length) return '<p class="print-empty-line">No record available</p>';
+  return `<ul class="print-detail-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
 function peoplePosition(id) {
@@ -3873,6 +4270,7 @@ function openPlanModal(id = null) {
   }
 
   const plan = id ? state.plans.find((item) => item.id === id) : {};
+  const relatedSop = id ? sopForPlan(id) : null;
   const people = personnelOptions();
   const today = toDateInputValue(new Date());
   const selectedMonth = Number(plan?.period_month || new Date().getMonth() + 1);
@@ -3886,10 +4284,13 @@ function openPlanModal(id = null) {
     fields: [
       `<div class="form-note success">
         <strong>What is a Plan?</strong>
-        <span>A plan is the period-level container. After saving it, open the plan and add plan items for each activity that needs Do, Check, and Act tracking.</span>
+        <span>A plan is the period-level schedule for executing approved SOPs. Link an SOP here when the whole plan follows one procedure, then add plan items for the actual activities.</span>
       </div>`,
       personnelPromptField(people.length),
       inputField("plan_title", "Plan Title", "text", plan?.plan_title, true),
+      canManageSops()
+        ? selectField("related_sop_id", "Related SOP", sopOptions(), relatedSop?.id || "", false)
+        : inputField("related_sop_display", "Related SOP", "text", relatedSop ? sopDisplayName(relatedSop) : "Not linked", false, { readonly: "readonly" }),
       selectField("period_month", "Period Month", monthNames.map((name, index) => ({ value: index + 1, label: name })), plan?.period_month, true),
       inputField("period_year", "Period Year", "number", plan?.period_year || new Date().getFullYear(), true),
       inputField("start_date", "Start Date", "date", plan?.start_date, true, { min: minStartDate, max: periodBounds.end }),
@@ -3915,6 +4316,7 @@ function openPlanItemModal(id = null) {
 
   const item = id ? state.planItems.find((record) => record.id === id) : {};
   const plan = state.plans.find((record) => record.id === state.selectedPlanId);
+  const relatedSop = id ? sopForPlanItem(id) : sopForPlan(state.selectedPlanId);
   const minDate = maxDateInputValue(toDateInputValue(new Date()), plan?.start_date);
   const maxDate = plan?.end_date || "";
   openModal({
@@ -3924,10 +4326,13 @@ function openPlanItemModal(id = null) {
     fields: [
       `<div class="form-note success">
         <strong>What is a Plan Item?</strong>
-        <span>A plan item is one specific activity inside the selected plan. Do records, supervisor checks, and corrective actions connect here.</span>
+        <span>A plan item is one specific SOP-based activity inside the selected plan. Do records, supervisor checks, and corrective actions connect here.</span>
       </div>`,
       templatePickerField(),
       hiddenField("plan_id", state.selectedPlanId),
+      canManageSops()
+        ? selectField("related_sop_id", "Related SOP", sopOptions(), relatedSop?.id || "", false)
+        : inputField("related_sop_display", "Related SOP", "text", relatedSop ? sopDisplayName(relatedSop) : "Not linked", false, { readonly: "readonly" }),
       selectField("category", "Category", workflowCategoryTextOptions(), item?.category, true),
       textareaField("objective", "Objective", item?.objective, true),
       textareaField("target_standard", "Target Standard", item?.target_standard, true),
@@ -4896,8 +5301,11 @@ async function handleModalSubmit(event) {
   delete payload.department_display;
   delete payload.workspace_display;
   delete payload.governing_sop_display;
+  delete payload.related_sop_display;
   const selectedGoverningSopId = state.modalMode === "product_lines" ? payload.governing_sop_id || null : undefined;
+  const selectedRelatedSopId = ["plans", "plan_items"].includes(state.modalMode) ? payload.related_sop_id || null : undefined;
   delete payload.governing_sop_id;
+  delete payload.related_sop_id;
 
   Object.keys(payload).forEach((key) => {
     if (payload[key] === "") payload[key] = null;
@@ -4975,6 +5383,12 @@ async function handleModalSubmit(event) {
     }
     if (state.modalMode === "product_lines" && recordId) {
       await syncWorkspaceGoverningSop(recordId, selectedGoverningSopId);
+    }
+    if (state.modalMode === "plans" && recordId) {
+      await syncPlanSopLink(recordId, selectedRelatedSopId);
+    }
+    if (state.modalMode === "plan_items" && recordId) {
+      await syncPlanItemSopLink(recordId, savedRecord?.plan_id || payload.plan_id, selectedRelatedSopId);
     }
     await afterRecordSaved(state.modalMode, payload, savedRecord);
     await logAudit(state.editingId ? "update" : "insert", state.modalMode, recordId, payload);
@@ -5218,6 +5632,55 @@ async function syncWorkspaceGoverningSop(workspaceId, sopId = null) {
     const { error: linkError } = await db
       .from("standard_operating_procedures")
       .update({ workspace_id: workspaceId })
+      .eq("id", sopId);
+
+    if (linkError) throw linkError;
+  }
+}
+
+async function syncPlanSopLink(planId, sopId = null) {
+  if (!planId || !canManageSops()) return;
+
+  const clearQuery = db
+    .from("standard_operating_procedures")
+    .update({ plan_id: null })
+    .eq("plan_id", planId)
+    .is("plan_item_id", null);
+
+  const { error: clearError } = sopId
+    ? await clearQuery.neq("id", sopId)
+    : await clearQuery;
+
+  if (clearError) throw clearError;
+
+  if (sopId) {
+    const { error: linkError } = await db
+      .from("standard_operating_procedures")
+      .update({ plan_id: planId })
+      .eq("id", sopId);
+
+    if (linkError) throw linkError;
+  }
+}
+
+async function syncPlanItemSopLink(planItemId, planId, sopId = null) {
+  if (!planItemId || !canManageSops()) return;
+
+  const clearQuery = db
+    .from("standard_operating_procedures")
+    .update({ plan_item_id: null })
+    .eq("plan_item_id", planItemId);
+
+  const { error: clearError } = sopId
+    ? await clearQuery.neq("id", sopId)
+    : await clearQuery;
+
+  if (clearError) throw clearError;
+
+  if (sopId) {
+    const { error: linkError } = await db
+      .from("standard_operating_procedures")
+      .update({ plan_id: planId || null, plan_item_id: planItemId })
       .eq("id", sopId);
 
     if (linkError) throw linkError;
@@ -6574,7 +7037,9 @@ function taskWorkspaceId(task) {
 
 function planItemForTask(task) {
   if (!task) return null;
+  const template = templateForTask(task);
   return state.planItems.find((item) => item.id === task.plan_item_id)
+    || state.planItems.find((item) => item.id === template?.plan_item_id)
     || state.planItems.find((item) => item.plan_id && item.plan_id === task.plan_id)
     || null;
 }
@@ -6582,7 +7047,44 @@ function planItemForTask(task) {
 function planForTask(task) {
   if (!task) return null;
   const planItem = planItemForTask(task);
-  return state.plans.find((plan) => plan.id === (task.plan_id || planItem?.plan_id)) || null;
+  const template = templateForTask(task);
+  return state.plans.find((plan) => plan.id === (task.plan_id || planItem?.plan_id || template?.plan_id)) || null;
+}
+
+function templateForTask(task) {
+  if (!task) return null;
+  return state.scheduleTemplates.find((template) => template.id === task.template_id)
+    || state.scheduleTemplates.find((template) => template.plan_item_id && template.plan_item_id === task.plan_item_id)
+    || null;
+}
+
+function planForTemplate(template) {
+  if (!template) return null;
+  const item = template.plan_item_id ? state.planItems.find((record) => record.id === template.plan_item_id) : null;
+  return state.plans.find((plan) => plan.id === (template.plan_id || item?.plan_id)) || null;
+}
+
+function sopPlan(sop) {
+  if (!sop) return null;
+  const item = sopPlanItem(sop);
+  return state.plans.find((plan) => plan.id === (sop.plan_id || item?.plan_id)) || null;
+}
+
+function sopPlanItem(sop) {
+  if (!sop) return null;
+  return state.planItems.find((item) => item.id === sop.plan_item_id)
+    || (sop.plan_id ? state.planItems.find((item) => item.plan_id === sop.plan_id) : null)
+    || null;
+}
+
+function sopForPlan(planId) {
+  if (!planId) return null;
+  return state.standardOperatingProcedures.find((sop) => sop.plan_id === planId && !sop.plan_item_id) || null;
+}
+
+function sopForPlanItem(planItemId) {
+  if (!planItemId) return null;
+  return state.standardOperatingProcedures.find((sop) => sop.plan_item_id === planItemId) || null;
 }
 
 function sopForTask(task) {
@@ -6685,7 +7187,9 @@ function formatPeriod(month, year) {
 
 function formatDate(value) {
   if (!value) return "N/A";
-  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+  const date = parseFlexibleDate(value);
+  if (!date) return "N/A";
+  return date.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric"
@@ -6694,7 +7198,9 @@ function formatDate(value) {
 
 function formatShortDate(value) {
   if (!value) return "";
-  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+  const date = parseFlexibleDate(value);
+  if (!date) return "";
+  return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric"
   });
@@ -6702,13 +7208,38 @@ function formatShortDate(value) {
 
 function formatDateTime(value) {
   if (!value) return "N/A";
-  return new Date(value).toLocaleString(undefined, {
+  const date = parseFlexibleDate(value, true);
+  if (!date) return "N/A";
+  return date.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function formatReportDate(value, fallback = "Not set") {
+  if (!value) return fallback;
+  const date = parseFlexibleDate(value);
+  if (!date) return fallback;
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function formatReportDateTime(value, fallback = "Not recorded") {
+  if (!value) return fallback;
+  const date = parseFlexibleDate(value, true);
+  if (!date) return fallback;
+  return date.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function parseFlexibleDate(value, keepTime = false) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const text = String(value);
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(text);
+  const date = new Date(dateOnly && !keepTime ? `${text}T00:00:00` : text);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function startOfDay(value) {

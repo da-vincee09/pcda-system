@@ -3086,7 +3086,7 @@ tbody tr:hover td {
 
   @page sop-summary {
     size: A4 landscape;
-    margin: 5mm;
+    margin: 8mm;
   }
 
   body {
@@ -3213,8 +3213,11 @@ tbody tr:hover td {
     page: sop-summary;
     width: 100%;
     max-width: 100%;
+    min-height: auto;
+    margin: 0;
     overflow: visible;
-    zoom: 0.93;
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .sop-summary-print,
@@ -3226,6 +3229,8 @@ tbody tr:hover td {
     margin: 5px 0 2px;
     color: #111;
     font-size: 9px;
+    break-after: avoid;
+    page-break-after: avoid;
   }
 
   .sop-summary-print p {
@@ -3312,8 +3317,98 @@ tbody tr:hover td {
 
   .sop-summary-print .monitoring-report-section {
     margin-top: 4px;
-    break-inside: auto;
-    page-break-inside: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .sop-summary-print .sop-record-list {
+    display: block;
+  }
+
+  .sop-summary-print .sop-record-card {
+    margin: 5px 0 7px;
+    padding: 0;
+    border: 1px solid #555;
+    background: #fffdf8;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .sop-summary-print .sop-record-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    color: #111;
+    background: #e4ead8;
+    border-bottom: 1px solid #555;
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .sop-summary-print .sop-record-meta {
+    margin: 0;
+    border-width: 0 0 1px !important;
+  }
+
+  .sop-summary-print .sop-record-meta th {
+    width: 13%;
+  }
+
+  .sop-summary-print .sop-record-meta td {
+    width: 37%;
+  }
+
+  .sop-summary-print .sop-pdca-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sop-summary-print .sop-pdca-grid section {
+    min-width: 0;
+    padding: 5px 6px;
+    border-right: 1px solid #555;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .sop-summary-print .sop-pdca-grid section:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .sop-summary-print .sop-pdca-grid section:nth-child(n + 4) {
+    border-top: 1px solid #555;
+  }
+
+  .sop-summary-print .sop-pdca-grid h3 {
+    margin: 0 0 4px;
+    color: #111;
+    font-size: 8px;
+    text-transform: uppercase;
+  }
+
+  .sop-summary-print .print-detail-list {
+    margin: 0;
+    padding-left: 12px;
+    color: #111;
+    font-size: 7.8px;
+    line-height: 1.25;
+  }
+
+  .sop-summary-print .print-detail-list li + li {
+    margin-top: 2px;
+  }
+
+  .sop-summary-print .print-empty-line,
+  .sop-summary-print .sop-empty-record {
+    margin: 0;
+    padding: 5px 6px;
+    color: #111;
+    border: 1px solid #555;
+    font-size: 8px;
   }
 
   .sop-summary-print table {
@@ -3322,20 +3417,36 @@ tbody tr:hover td {
     margin-bottom: 3px;
     border-collapse: collapse;
     border: 1px solid #555 !important;
-    font-size: 7.2px;
-    line-height: 1.12;
+    font-size: 7.8px;
+    line-height: 1.2;
     table-layout: fixed;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
-  .sop-summary-print .summary-col-activity { width: 20%; }
-  .sop-summary-print .summary-col-done { width: 19%; }
-  .sop-summary-print .summary-col-result { width: 18%; }
-  .sop-summary-print .summary-col-remarks { width: 27%; }
-  .sop-summary-print .summary-col-verified { width: 16%; }
+  .sop-summary-print thead {
+    display: table-header-group;
+  }
+
+  .sop-summary-print tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .sop-summary-print .summary-col-activity { width: 12%; }
+  .sop-summary-print .summary-col-done { width: 18%; }
+  .sop-summary-print .summary-col-result { width: 8%; }
+  .sop-summary-print .summary-col-findings { width: 16%; }
+  .sop-summary-print .summary-col-manager { width: 15%; }
+  .sop-summary-print .summary-col-corrective { width: 13%; }
+  .sop-summary-print .summary-col-preventive { width: 13%; }
+  .sop-summary-print .summary-col-verified { width: 5%; }
 
   .sop-summary-print th,
   .sop-summary-print td {
-    padding: 2px 3px;
+    padding: 3px 4px;
     color: #111;
     border: 1px solid #555 !important;
     overflow-wrap: anywhere;
@@ -3355,9 +3466,88 @@ tbody tr:hover td {
   }
 
   .sop-summary-print .print-detail-line + .print-detail-line {
-    margin-top: 1px;
-    padding-top: 1px;
+    margin-top: 2px;
+    padding-top: 2px;
     border-top: 1px solid #c8c0b3;
+  }
+
+  .sop-summary-print .traceability-print-table {
+    font-size: 7.5px;
+  }
+
+  .sop-summary-print .approval-print-section,
+  .sop-summary-print .traceability-print-section,
+  .sop-summary-print .monitoring-record,
+  .sop-summary-print .findings-section,
+  .sop-summary-print .corrective-action-section,
+  .sop-summary-print .preventive-action-section,
+  .sop-summary-print .compliance-summary,
+  .sop-summary-print .sop-conclusion {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .sop-summary-print .sop-executive-summary {
+    margin-top: 5px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .sop-summary-print .sop-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border: 1px solid #555;
+    background: #fffdf8;
+  }
+
+  .sop-summary-print .sop-summary-cards article {
+    min-width: 0;
+    padding: 5px 6px;
+    border-right: 1px solid #555;
+    border-bottom: 1px solid #555;
+  }
+
+  .sop-summary-print .sop-summary-cards article:nth-child(4n) {
+    border-right: 0;
+  }
+
+  .sop-summary-print .sop-summary-cards article:nth-child(n + 5) {
+    border-bottom: 0;
+  }
+
+  .sop-summary-print .sop-summary-cards span,
+  .sop-summary-print .sop-summary-cards strong,
+  .sop-summary-print .sop-summary-cards em {
+    display: block;
+    color: #111;
+  }
+
+  .sop-summary-print .sop-summary-cards span {
+    font-size: 7px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .sop-summary-print .sop-summary-cards strong {
+    margin: 2px 0;
+    font-size: 10px;
+  }
+
+  .sop-summary-print .sop-summary-cards em {
+    font-size: 7px;
+    font-style: normal;
+  }
+
+  .sop-summary-print .sop-summary-cards .is-alert {
+    background: #f5ddd5 !important;
+  }
+
+  .sop-summary-print .sop-summary-cards .is-good {
+    background: #e4ead8 !important;
+  }
+
+  .sop-summary-print .sop-summary-cards .is-pending {
+    background: #f2ead6 !important;
   }
 
   .sop-summary-print th:last-child,
@@ -3369,6 +3559,18 @@ tbody tr:hover td {
     margin-top: 12px;
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .sop-summary-print .document-control-table,
+  .sop-summary-print .review-signature-table,
+  .sop-summary-print .report-period-block,
+  .sop-summary-print .compliance-summary-table,
+  .sop-summary-print .sop-executive-summary,
+  .sop-summary-print .sop-conclusion {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .sop-summary-print .signature-table td {
