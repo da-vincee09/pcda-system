@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://rlauwxqifqpyyiuzxdoe.supabase.co";
+﻿const SUPABASE_URL = "https://rlauwxqifqpyyiuzxdoe.supabase.co";
 const SUPABASE_KEY = "sb_publishable_fQCecVQkPBTRBtWCM5zRYA_iiFt-gDK";
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -38,6 +38,16 @@ const state = {
   standardOperatingProcedures: [],
   sopMonitoringLinks: [],
   sopSummaryReports: [],
+  assessmentTypes: [],
+  assessmentTemplates: [],
+  assessmentTemplateSections: [],
+  assessmentTemplateQuestions: [],
+  assessments: [],
+  assessmentSections: [],
+  assessmentFindings: [],
+  assessmentCorrectiveActions: [],
+  assessmentRatingScales: [],
+  assessmentReports: [],
   attendanceRecords: [],
   userProfile: null,
   userProfiles: [],
@@ -219,6 +229,17 @@ const elements = {
   workspaceTasksDashboard: $("#workspaceTasksDashboard"),
   sopDashboardCards: $("#sopDashboardCards"),
   recentSopsDashboardTable: $("#recentSopsDashboardTable"),
+  assessmentDashboardCards: $("#assessmentDashboardCards"),
+  recentAssessmentsDashboardTable: $("#recentAssessmentsDashboardTable"),
+  assessmentTable: $("#assessmentTable"),
+  assessmentTemplatesTable: $("#assessmentTemplatesTable"),
+  assessmentFindingsTable: $("#assessmentFindingsTable"),
+  assessmentActionsTable: $("#assessmentActionsTable"),
+  assessmentReportsTable: $("#assessmentReportsTable"),
+  addAssessmentBtn: $("#addAssessmentBtn"),
+  addAssessmentTemplateBtn: $("#addAssessmentTemplateBtn"),
+  addAssessmentFindingBtn: $("#addAssessmentFindingBtn"),
+  addAssessmentActionBtn: $("#addAssessmentActionBtn"),
   taskWorkspaceFilter: $("#taskWorkspaceFilter"),
   pageTitle: $("#pageTitle"),
   companyEyebrow: $("#companyEyebrow"),
@@ -277,6 +298,7 @@ const iconPaths = {
   people: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.9"></path><path d="M16 3.1a4 4 0 0 1 0 7.8"></path>',
   equipment: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-5.6 5.6a2.1 2.1 0 0 1-3-3l5.6-5.6a6 6 0 0 1 7.9-7.9l-3.1 3.1z"></path>',
   sop: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path><path d="M8 9h2"></path>',
+  assessment: '<path d="M9 11l2 2 4-4"></path><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 3v6h-6"></path>',
   settings: '<path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.4 1z"></path>',
   plan: '<path d="M8 2v4"></path><path d="M16 2v4"></path><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path>',
   items: '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>',
@@ -367,6 +389,10 @@ function bindStaticEvents() {
   $("#addPeopleProfileBtn")?.addEventListener("click", () => openPeopleProfileModal());
   elements.addDepartmentBtn?.addEventListener("click", () => openDepartmentModal());
   $("#addSopBtn")?.addEventListener("click", () => openSopModal());
+  elements.addAssessmentBtn?.addEventListener("click", () => openAssessmentModal());
+  elements.addAssessmentTemplateBtn?.addEventListener("click", () => openAssessmentTemplateModal());
+  elements.addAssessmentFindingBtn?.addEventListener("click", () => openAssessmentFindingModal());
+  elements.addAssessmentActionBtn?.addEventListener("click", () => openAssessmentCorrectiveActionModal());
   $("#addWorkspaceBtn")?.addEventListener("click", () => openProductLineModal());
   elements.peopleSearchInput?.addEventListener("input", renderPeopleProfiles);
   elements.peopleDepartmentFilter?.addEventListener("change", renderPeopleProfiles);
@@ -666,6 +692,16 @@ async function loadAllData() {
       fetchTable("standard_operating_procedures", "created_at", true),
       fetchTable("sop_monitoring_links", "created_at", true),
       fetchTable("sop_summary_reports", "created_at", true),
+      fetchTable("assessment_types", "type_name", false),
+      fetchTable("assessment_templates", "created_at", true),
+      fetchTable("assessment_template_sections", "sort_order", false),
+      fetchTable("assessment_template_questions", "sort_order", false),
+      fetchTable("assessments", "created_at", true),
+      fetchTable("assessment_sections", "sort_order", false),
+      fetchTable("assessment_findings", "created_at", true),
+      fetchTable("assessment_corrective_actions", "created_at", true),
+      fetchTable("assessment_rating_scales", "sort_order", false),
+      fetchTable("assessment_reports", "created_at", true),
       fetchTable("attendance", "created_at", true)
     ]);
 
@@ -676,7 +712,9 @@ async function loadAllData() {
       taskDoRecords, taskCheckRecords, actionCases, rolePermissions, notifications, auditLogs,
       fileAttachments, approvalRequests, monitoringTemplatesDb, dynamicChecklists, templateWorkflows,
       equipmentMaintenanceHistory, employeeDocuments, standardOperatingProcedures, sopMonitoringLinks,
-      sopSummaryReports, attendanceRecords
+      sopSummaryReports, assessmentTypes, assessmentTemplates, assessmentTemplateSections, assessmentTemplateQuestions,
+      assessments, assessmentSections, assessmentFindings, assessmentCorrectiveActions, assessmentRatingScales, assessmentReports,
+      attendanceRecords
     ] = results.map((result) => (
       result.status === "fulfilled" ? result.value : []
     ));
@@ -722,6 +760,16 @@ async function loadAllData() {
     state.standardOperatingProcedures = standardOperatingProcedures;
     state.sopMonitoringLinks = sopMonitoringLinks;
     state.sopSummaryReports = sopSummaryReports;
+    state.assessmentTypes = assessmentTypes;
+    state.assessmentTemplates = assessmentTemplates;
+    state.assessmentTemplateSections = assessmentTemplateSections;
+    state.assessmentTemplateQuestions = assessmentTemplateQuestions;
+    state.assessments = assessments;
+    state.assessmentSections = assessmentSections;
+    state.assessmentFindings = assessmentFindings;
+    state.assessmentCorrectiveActions = assessmentCorrectiveActions;
+    state.assessmentRatingScales = assessmentRatingScales;
+    state.assessmentReports = assessmentReports;
     state.attendanceRecords = attendanceRecords;
 
     const failedLoads = results.filter((result) => result.status === "rejected");
@@ -804,6 +852,9 @@ function setupRealtime() {
     .on("postgres_changes", { event: "*", schema: "public", table: "action_cases" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, () => loadAllData())
     .on("postgres_changes", { event: "*", schema: "public", table: "standard_operating_procedures" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "assessments" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "assessment_findings" }, () => loadAllData())
+    .on("postgres_changes", { event: "*", schema: "public", table: "assessment_corrective_actions" }, () => loadAllData())
     .subscribe();
 }
 
@@ -830,6 +881,12 @@ function renderAll() {
   renderAttendance();
   renderSops();
   renderSopSummaryReports();
+  renderAssessmentDashboardSection();
+  renderAssessments();
+  renderAssessmentTemplates();
+  renderAssessmentFindings();
+  renderAssessmentCorrectiveActions();
+  renderAssessmentReports();
   renderEquipment();
   renderMonitoringPlans();
   renderTaskBoard();
@@ -936,6 +993,22 @@ function canViewSops() {
   return Boolean(state.session);
 }
 
+function canViewAssessments() {
+  return permissionValue("assessment_audit", "view", permissionValue("assessments", "view", Boolean(state.session)));
+}
+
+function canManageAssessments() {
+  return permissionValue("assessment_audit", "edit", permissionValue("assessments", "edit", ["administrator", "owner", "president", "general_manager", "hr_manager", "production_manager", "production_supervisor", "supervisor", "food_safety_compliance_officer"].includes(currentRole())));
+}
+
+function canCreateAssessments() {
+  return permissionValue("assessment_audit", "create", permissionValue("assessments", "create", canManageAssessments()));
+}
+
+function canApproveAssessments() {
+  return permissionValue("assessment_audit", "approve", permissionValue("assessments", "approve", ["administrator", "owner", "president", "general_manager"].includes(currentRole())));
+}
+
 function canManageSops() {
   return permissionValue("sop", "edit", ["administrator", "owner", "general_manager", "production_manager", "production_supervisor", "supervisor", "hr_manager"].includes(currentRole()));
 }
@@ -958,6 +1031,10 @@ function applyPermissions() {
   setControlAccess("#addDepartmentBtn", canManagePersonnel());
   setControlAccess("#addAttendanceBtn", canManagePersonnel());
   setControlAccess("#addSopBtn", canManageSops());
+  setControlAccess("#addAssessmentBtn", canCreateAssessments());
+  setControlAccess("#addAssessmentTemplateBtn", canManageAssessments());
+  setControlAccess("#addAssessmentFindingBtn", canManageAssessments());
+  setControlAccess("#addAssessmentActionBtn", canManageAssessments());
   setControlAccess("#addWorkspaceBtn", canManagePlans());
   setControlAccess("#editCompanySettingsBtn", canManageCompanySettings());
   setControlAccess("#addEquipmentBtn", canManageEquipment());
@@ -976,6 +1053,8 @@ function applyPermissions() {
   if (activeApprovalView && !canApproveRecords()) switchView("dashboardView");
   const activeSopView = $("#sopView")?.classList.contains("is-active");
   if (activeSopView && !canViewSops()) switchView("dashboardView");
+  const activeAssessmentView = $("#assessmentsView")?.classList.contains("is-active");
+  if (activeAssessmentView && !canViewAssessments()) switchView("dashboardView");
 }
 
 function setControlAccess(selector, allowed) {
@@ -1039,6 +1118,7 @@ function renderDashboard() {
     renderMonitoringModules();
     renderWorkspaceTasksDashboard();
     renderSopDashboardSection();
+    renderAssessmentDashboardSection();
     return;
   }
 
@@ -1146,6 +1226,7 @@ function renderDashboard() {
   renderMonitoringModules();
   renderWorkspaceTasksDashboard();
   renderSopDashboardSection();
+  renderAssessmentDashboardSection();
   renderDashboardCharts();
 }
 
@@ -1614,7 +1695,7 @@ function renderMonitoringModuleCard(module) {
     ? `${module.completed} Active SOP${module.completed === 1 ? "" : "s"}`
     : `${module.compliance}% Workflow Completion`;
   const nextAction = module.nextTask
-    ? `${escapeHtml(module.nextTask.due_time || "Any time")} · ${formatDate(module.nextTask.task_date)}`
+    ? `${escapeHtml(module.nextTask.due_time || "Any time")} Â· ${formatDate(module.nextTask.task_date)}`
     : "No upcoming task";
   const team = module.assignedDepartments?.length
     ? module.assignedDepartments.map(escapeHtml).slice(0, 2).join(", ")
@@ -1694,8 +1775,8 @@ function statusClassName(statusKey) {
 function moduleIcon(templateId) {
   const icons = {
     "sop-library": "SOP",
-    "preventive-maintenance": "🔧",
-    "temperature-monitoring": "°C",
+    "preventive-maintenance": "ðŸ”§",
+    "temperature-monitoring": "Â°C",
     "raw-meat-receiving": "RCV",
     "manufacturing-operations": "OPS",
     "personnel-hygiene": "PPE",
@@ -1764,7 +1845,7 @@ function moduleSpecificMetrics(template, tasks, checks, cases) {
     const latestTemp = latestTemperatureReading(tasks, checks);
     return [
       { label: "Latest Temp", value: latestTemp || "No reading" },
-      { label: "Allowed Range", value: "-18°C to -21°C" },
+      { label: "Allowed Range", value: "-18Â°C to -21Â°C" },
       { label: "Failed Readings", value: String(failed) }
     ];
   }
@@ -1814,8 +1895,8 @@ function latestTemperatureReading(tasks, checks) {
     .sort((a, b) => new Date(b.created_at || b.task_date) - new Date(a.created_at || a.task_date))
     .map((item) => `${item.observation || ""} ${item.remarks || ""} ${item.output_result || ""} ${item.task_title || ""}`)
     .join(" ");
-  const match = text.match(/-?\d+(?:\.\d+)?\s?°?\s?c/i);
-  return match ? match[0].replace(/\s+/g, "").toUpperCase().replace("C", "°C") : "";
+  const match = text.match(/-?\d+(?:\.\d+)?\s?Â°?\s?c/i);
+  return match ? match[0].replace(/\s+/g, "").toUpperCase().replace("C", "Â°C") : "";
 }
 
 function uniquePeople(ids) {
@@ -2422,8 +2503,8 @@ function renderEmployeeCard(person, canManage) {
       <div class="employee-avatar">${escapeHtml(initials)}</div>
       <div>
         <strong>${escapeHtml(person.complete_name || "Unnamed employee")}</strong>
-        <span>${escapeHtml(person.employee_id || "No employee ID")} · ${escapeHtml(person.position || "No position")}</span>
-        <small>${escapeHtml(departmentNameRaw(person.department_id) || person.department || "Unassigned department")} · ${escapeHtml(person.employment_type || "Employment type not set")}</small>
+        <span>${escapeHtml(person.employee_id || "No employee ID")} Â· ${escapeHtml(person.position || "No position")}</span>
+        <small>${escapeHtml(departmentNameRaw(person.department_id) || person.department || "Unassigned department")} Â· ${escapeHtml(person.employment_type || "Employment type not set")}</small>
       </div>
       <div class="employee-card-meta">
         <span class="status-pill ${statusPillClass(status)}">${formattedRoleLabel(status)}</span>
@@ -2451,7 +2532,7 @@ function renderEmployeeProfilePanel(person, canManage) {
       <div class="employee-avatar large">${escapeHtml(employeeInitials(person))}</div>
       <div>
         <h4>${escapeHtml(person.complete_name || "Unnamed employee")}</h4>
-        <p>${escapeHtml(person.employee_id || "No employee ID")} · ${escapeHtml(person.position || "No position")}</p>
+        <p>${escapeHtml(person.employee_id || "No employee ID")} Â· ${escapeHtml(person.position || "No position")}</p>
       </div>
       ${canManage ? `<div class="table-actions"><button type="button" onclick="openPeopleProfileModal('${escapeAttribute(person.id)}')">Edit</button><button type="button" onclick="openEmployeeDocumentModal(null, '${escapeAttribute(person.id)}')">Add Document</button></div>` : ""}
     </div>
@@ -5110,6 +5191,23 @@ function bindRelationshipAutofill() {
   if (state.modalMode === "sop_summary_reports") {
     form.elements.sop_id?.addEventListener("change", (event) => applySopSummaryDefaults(event.target.value));
   }
+
+  if (["assessment_templates", "assessments", "assessment_sections", "assessment_findings"].includes(state.modalMode)) {
+    setupAssessmentRatingControls(form);
+    form.elements.assessment_type_id?.addEventListener("change", () => setupAssessmentRatingControls(form));
+    form.elements.template_id?.addEventListener("change", () => setupAssessmentRatingControls(form));
+    form.elements.assessment_id?.addEventListener("change", () => setupAssessmentRatingControls(form));
+    form.elements.assessment_source?.addEventListener("change", () => {
+      if (form.elements.assessment_source.value === "consultant" && form.elements.evaluator_organization && !form.elements.evaluator_organization.value) {
+        form.elements.evaluator_organization.value = "CSA Business Consultancy";
+      }
+    });
+    form.elements.evaluator_type?.addEventListener("change", () => {
+      if (form.elements.evaluator_type.value === "consultant" && form.elements.evaluator_organization && !form.elements.evaluator_organization.value) {
+        form.elements.evaluator_organization.value = "CSA Business Consultancy";
+      }
+    });
+  }
 }
 
 function applyTaskWorkflow(templateId) {
@@ -5243,6 +5341,14 @@ async function handleModalSubmit(event) {
     showToast("Your role cannot edit SOP summary reports.", "error");
     return;
   }
+  if (["assessment_templates", "assessment_template_sections", "assessment_template_questions", "assessment_sections", "assessment_findings", "assessment_corrective_actions", "assessment_rating_scales", "assessment_reports"].includes(state.modalMode) && !canManageAssessments()) {
+    showToast("Your role cannot manage assessment records.", "error");
+    return;
+  }
+  if (state.modalMode === "assessments" && !canCreateAssessments() && !canManageAssessments()) {
+    showToast("Your role cannot create assessments.", "error");
+    return;
+  }
   if (state.modalMode === "company_settings" && !canManageCompanySettings()) {
     showToast("Only general managers can update company settings.", "error");
     return;
@@ -5288,7 +5394,9 @@ async function handleModalSubmit(event) {
     "company_settings", "equipment", "equipment_maintenance_history", "product_lines", "monitoring_categories",
     "monitoring_schedule_templates", "monitoring_templates", "dynamic_checklists", "template_workflows", "generated_tasks", "task_do_records",
     "task_check_records", "action_cases", "plans", "plan_items", "do_records",
-    "check_records", "action_taken", "employee_documents", "standard_operating_procedures", "sop_summary_reports"
+    "check_records", "action_taken", "employee_documents", "standard_operating_procedures", "sop_summary_reports",
+    "assessment_templates", "assessment_template_sections", "assessment_template_questions", "assessments", "assessment_sections",
+    "assessment_findings", "assessment_corrective_actions", "assessment_rating_scales", "assessment_reports"
   ].includes(state.modalMode) && !canManageRecords()) {
     showToast("Your account is view-only until an administrator assigns a role.", "error");
     return;
@@ -5316,7 +5424,10 @@ async function handleModalSubmit(event) {
   ["monthly_day", "at_risk_hours", "sort_order", "due_after_hours"].forEach((key) => {
     if (payload[key]) payload[key] = Number(payload[key]);
   });
-  ["auto_generate", "requires_approval", "manager_notified", "evidence_required", "checklist_enabled", "verification_required", "corrective_action_required", "is_active", "requires_evidence", "attachments_required"].forEach((key) => {
+  ["overall_score", "section_score", "score", "min_score", "max_score", "percentage_value", "star_value", "numeric_value", "overall_percentage_value", "overall_star_value", "overall_numeric_value", "star_max", "numeric_min", "numeric_max", "passing_threshold", "score_value"].forEach((key) => {
+    if (payload[key] !== null && payload[key] !== undefined && payload[key] !== "") payload[key] = Number(payload[key]);
+  });
+  ["auto_generate", "requires_approval", "manager_notified", "evidence_required", "rating_required", "is_required", "requires_corrective_action", "checklist_enabled", "verification_required", "corrective_action_required", "is_active", "is_passing", "allow_not_applicable", "requires_evidence", "attachments_required"].forEach((key) => {
     if (key in payload) payload[key] = payload[key] === "true";
   });
   if (state.modalMode === "standard_operating_procedures" && !payload.attachments_required) {
@@ -5349,6 +5460,32 @@ async function handleModalSubmit(event) {
       payload.summary_snapshot = report.snapshot;
     }
   }
+  if (state.modalMode === "assessment_templates") {
+    payload.scoring_method = payload.rating_method || payload.scoring_method || "custom";
+  }
+  if (state.modalMode === "assessments") {
+    payload.assessed_business_name = payload.assessed_business_name || payload.assessed_company_name || null;
+    payload.assessed_company_name = payload.assessed_company_name || payload.assessed_business_name || null;
+    payload.assessed_address = payload.assessed_address || payload.assessed_location || null;
+    payload.assessed_location = payload.assessed_location || payload.assessed_address || null;
+    payload.assessment_start_time = payload.assessment_start_time || payload.start_time || null;
+    payload.start_time = payload.start_time || payload.assessment_start_time || null;
+    payload.assessment_end_time = payload.assessment_end_time || payload.end_time || null;
+    payload.end_time = payload.end_time || payload.assessment_end_time || null;
+    payload.evaluator_type = payload.evaluator_type || payload.assessment_source || "internal";
+    payload.assessment_source = payload.assessment_source || payload.evaluator_type || "internal";
+    payload.overall_compliance_level = payload.overall_compliance_level || payload.compliance_level || null;
+    payload.compliance_level = payload.compliance_level || payload.overall_compliance_level || null;
+    payload.general_findings = payload.general_findings || payload.findings_summary || null;
+    payload.findings_summary = payload.findings_summary || payload.general_findings || null;
+    applyAssessmentRatingPayload(payload, "overall");
+  }
+  if (state.modalMode === "assessment_sections") {
+    applyAssessmentRatingPayload(payload, "section");
+  }
+  if (state.modalMode === "assessment_findings") {
+    applyAssessmentRatingPayload(payload, "finding");
+  }
 
   const validationMessage = validateDates(state.modalMode, payload);
   if (validationMessage) {
@@ -5363,7 +5500,7 @@ async function handleModalSubmit(event) {
     payload.workspace_id = payload.product_line_id || null;
   }
 
-  if (state.modalMode === "generated_tasks" || (state.modalMode === "product_lines" && tableHasColumn(state.productLines, "updated_at")) || state.modalMode === "departments") {
+  if (state.modalMode === "generated_tasks" || ["assessments", "assessment_templates", "assessment_sections", "assessment_findings", "assessment_corrective_actions", "assessment_reports"].includes(state.modalMode) || (state.modalMode === "product_lines" && tableHasColumn(state.productLines, "updated_at")) || state.modalMode === "departments") {
     payload.updated_at = new Date().toISOString();
   }
 
@@ -5485,6 +5622,7 @@ function schemaCompatiblePayload(tableName, payload, error) {
 function attachmentTypeForMode(mode) {
   if (mode === "employee_documents") return "employee_document";
   if (mode === "standard_operating_procedures") return "sop_document";
+  if (String(mode || "").startsWith("assessment")) return "assessment_evidence";
   return "evidence";
 }
 
@@ -5611,6 +5749,31 @@ async function afterRecordSaved(mode, payload, savedRecord = null) {
 
   if (mode === "monitoring_schedule_templates" && savedRecord?.auto_generate && (!savedRecord.requires_approval || savedRecord.approval_status === "approved")) {
     await generateTasksFromTemplate(savedRecord);
+  }
+
+  if (mode === "assessments" && savedRecord?.id) {
+    await ensureAssessmentSectionsFromTemplate(savedRecord);
+    await notifyAssessmentStakeholders(savedRecord, "Assessment saved", `${savedRecord.assessment_title || "Assessment"} is now ${formattedRoleLabel(savedRecord.assessment_status || "draft")}.`);
+  }
+
+  if (mode === "assessment_findings" && savedRecord?.requires_corrective_action) {
+    await notifyManagers("Assessment finding needs action", savedRecord.observation || savedRecord.question_text || "A finding requires corrective action.", "assessment_findings", savedRecord.id);
+  }
+
+  if (mode === "assessment_corrective_actions" && savedRecord?.assigned_to) {
+    await createNotification({
+      recipientUserId: personUserId(savedRecord.assigned_to),
+      recipientPersonId: savedRecord.assigned_to,
+      title: "Assessment action assigned",
+      message: savedRecord.action_title || "A corrective action was assigned to you.",
+      type: "assessment",
+      relatedTable: "assessment_corrective_actions",
+      relatedRecordId: savedRecord.id
+    });
+  }
+
+  if (mode === "assessment_reports" && savedRecord?.id) {
+    await notifyManagers("Assessment report generated", savedRecord.report_title || "An assessment report was generated.", "assessment_reports", savedRecord.id);
   }
 }
 
@@ -7522,3 +7685,803 @@ window.printPlansReport = printPlansReport;
 window.printDoReport = printDoReport;
 window.printCheckReport = printCheckReport;
 window.printActionsReport = printActionsReport;
+
+
+
+
+
+
+// Generic Assessment & Audit module
+function canUseAssessmentTables() {
+  return !state.tableErrors.assessments;
+}
+
+function renderAssessmentDashboardSection() {
+  const cards = elements.assessmentDashboardCards;
+  const table = elements.recentAssessmentsDashboardTable;
+  if (!cards && !table) return;
+  const records = canViewAssessments() ? state.assessments : [];
+  const actions = canViewAssessments() ? state.assessmentCorrectiveActions : [];
+  const avg = records.length ? Math.round(records.reduce((sum, item) => sum + Number(item.overall_score || 0), 0) / records.length) : 0;
+  const data = [
+    ["Total", records.length],
+    ["Scheduled", records.filter((item) => item.assessment_status === "scheduled").length],
+    ["In Progress", records.filter((item) => item.assessment_status === "in_progress").length],
+    ["Completed", records.filter((item) => ["completed", "reviewed", "approved"].includes(item.assessment_status)).length],
+    ["Low Rated", records.filter((item) => Number(item.overall_score || 100) < 75).length],
+    ["Open Actions", actions.filter((item) => !["verified", "closed"].includes(item.action_status)).length],
+    ["Average", records.length ? `${avg}%` : "0%"]
+  ];
+  if (cards) cards.innerHTML = data.map(([label, value]) => `<article class="summary-card ${["Low Rated", "Open Actions"].includes(label) ? "alert" : ""}"><span>${label}</span><strong>${value}</strong></article>`).join("");
+  if (table) {
+    const latest = [...records].sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)).slice(0, 5);
+    table.innerHTML = renderRows(latest, (item) => `
+      <tr>
+        <td><strong>${escapeHtml(item.assessment_title || "Untitled Assessment")}</strong><span class="muted-action">${escapeHtml(item.assessment_reference_no || assessmentTypeName(item.assessment_type_id) || "No reference")}</span></td>
+        <td>${escapeHtml(assessmentScopeLabel(item))}</td>
+        <td><span class="status-pill ${item.assessment_status === "draft" ? "warning" : ""}">${formattedRoleLabel(item.assessment_status || "draft")}</span></td>
+        <td>${escapeHtml(item.overall_score ?? "-")}</td>
+        <td>${formatDate(item.assessment_date || item.created_at)}</td>
+      </tr>
+    `, 5, canUseAssessmentTables() ? "No assessments yet." : "Run the assessment SQL migration first.");
+  }
+}
+
+function renderAssessments() {
+  if (!elements.assessmentTable) return;
+  const records = canViewAssessments() ? state.assessments : [];
+  elements.assessmentTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.assessment_title || "Untitled Assessment")}</strong><span class="muted-action">${escapeHtml(item.assessment_reference_no || "No reference")}</span></td>
+      <td>${escapeHtml(assessmentTypeName(item.assessment_type_id) || "Custom")}</td>
+      <td>${escapeHtml(assessmentScopeLabel(item))}</td>
+      <td>${formatDate(item.assessment_date)}</td>
+      <td><span class="status-pill ${item.assessment_status === "draft" ? "warning" : ""}">${formattedRoleLabel(item.assessment_status || "draft")}</span></td>
+      <td>${escapeHtml(item.overall_score ?? "-")}</td>
+      <td class="actions-cell"><div class="table-actions"><button class="pdf-action" type="button" onclick="printAssessmentReport('${escapeAttribute(item.id)}')">Print PDF</button>${canManageAssessments() ? `<button type="button" onclick="openAssessmentModal('${escapeAttribute(item.id)}')">Edit</button><button type="button" onclick="openAssessmentSectionModal('', '${escapeAttribute(item.id)}')">Section</button><button type="button" onclick="openAssessmentReportModal('', '${escapeAttribute(item.id)}')">Report</button>${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('assessments', '${escapeAttribute(item.id)}')">Delete</button>` : ""}` : ""}</div></td>
+    </tr>
+  `, 7, canUseAssessmentTables() ? "No assessment records found." : "Run the assessment SQL migration first.");
+}
+
+function renderAssessmentTemplates() {
+  if (!elements.assessmentTemplatesTable) return;
+  const records = canViewAssessments() ? state.assessmentTemplates : [];
+  elements.assessmentTemplatesTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.template_name || "Untitled Template")}</strong><span class="muted-action">${escapeHtml(item.description || "Reusable criteria")}</span></td>
+      <td>${escapeHtml(assessmentTypeName(item.assessment_type_id) || "Custom")}</td>
+      <td>${formattedRoleLabel(item.scoring_method || "custom")}</td>
+      <td>${state.assessmentTemplateSections.filter((section) => section.template_id === item.id).length}</td>
+      <td>${state.assessmentRatingScales.filter((scale) => scale.template_id === item.id).length}</td>
+      <td><span class="status-pill ${item.is_active === false ? "danger" : ""}">${item.is_active === false ? "Inactive" : "Active"}</span></td>
+      <td class="actions-cell"><div class="table-actions">${canManageAssessments() ? `<button type="button" onclick="openAssessmentTemplateModal('${escapeAttribute(item.id)}')">Edit</button><button type="button" onclick="openAssessmentTemplateSectionModal('', '${escapeAttribute(item.id)}')">Section</button><button type="button" onclick="openAssessmentRatingScaleModal('', '${escapeAttribute(item.id)}')">Rating</button>` : ""}</div></td>
+    </tr>
+  `, 7, "No assessment templates found.");
+}
+
+function renderAssessmentFindings() {
+  if (!elements.assessmentFindingsTable) return;
+  const records = canViewAssessments() ? state.assessmentFindings : [];
+  elements.assessmentFindingsTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(assessmentTitle(item.assessment_id))}</strong><span class="muted-action">${escapeHtml(assessmentSectionTitle(item.section_id) || "General")}</span></td>
+      <td>${escapeHtml(item.observation || item.question_text || "Observation")}</td>
+      <td><span class="status-pill ${["high", "critical"].includes(item.severity) ? "danger" : item.severity === "medium" ? "warning" : ""}">${formattedRoleLabel(item.severity || "medium")}</span></td>
+      <td>${formattedRoleLabel(item.compliance_result || "needs_follow_up")}</td>
+      <td>${peopleName(item.responsible_person_id)}</td>
+      <td>${formatDate(item.target_completion_date)}</td>
+      <td class="actions-cell"><div class="table-actions">${canManageAssessments() ? `<button type="button" onclick="openAssessmentFindingModal('${escapeAttribute(item.id)}')">Edit</button><button type="button" onclick="openAssessmentCorrectiveActionModal('', '${escapeAttribute(item.id)}')">Action</button>` : ""}</div></td>
+    </tr>
+  `, 7, "No assessment findings found.");
+}
+
+function renderAssessmentCorrectiveActions() {
+  if (!elements.assessmentActionsTable) return;
+  const records = canViewAssessments() ? state.assessmentCorrectiveActions : [];
+  elements.assessmentActionsTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.action_title || "Corrective Action")}</strong><span class="muted-action">${escapeHtml(assessmentTitle(item.assessment_id))}</span></td>
+      <td>${escapeHtml(item.corrective_action || item.correction || "No details")}</td>
+      <td>${peopleName(item.assigned_to)}</td>
+      <td>${formatDate(item.due_date)}</td>
+      <td><span class="status-pill ${item.action_status === "overdue" ? "danger" : item.action_status === "open" ? "warning" : ""}">${formattedRoleLabel(item.action_status || "open")}</span></td>
+      <td class="actions-cell"><div class="table-actions">${canManageAssessments() ? `<button type="button" onclick="openAssessmentCorrectiveActionModal('${escapeAttribute(item.id)}')">Edit</button>` : ""}</div></td>
+    </tr>
+  `, 6, "No assessment corrective actions found.");
+}
+
+function renderAssessmentReports() {
+  if (!elements.assessmentReportsTable) return;
+  const records = canViewAssessments() ? state.assessmentReports : [];
+  elements.assessmentReportsTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.report_title || "Assessment Report")}</strong><span class="muted-action">${escapeHtml(item.report_reference_no || "No reference")}</span></td>
+      <td>${escapeHtml(assessmentTitle(item.assessment_id))}</td>
+      <td><span class="status-pill ${item.report_status === "approved" ? "" : "warning"}">${formattedRoleLabel(item.report_status || "draft")}</span></td>
+      <td>${formatDateTime(item.generated_at || item.created_at)}</td>
+      <td class="actions-cell"><div class="table-actions"><button class="pdf-action" type="button" onclick="printAssessmentReport('${escapeAttribute(item.assessment_id)}')">Print PDF</button>${canManageAssessments() ? `<button type="button" onclick="openAssessmentReportModal('${escapeAttribute(item.id)}')">Edit</button>` : ""}</div></td>
+    </tr>
+  `, 5, "No assessment reports generated yet.");
+}
+
+function openAssessmentModal(id = null) {
+  const item = id ? state.assessments.find((record) => record.id === id) : {};
+  const template = state.assessmentTemplates.find((record) => record.id === item?.template_id);
+  openModal({ title: id ? "Edit Assessment" : "Create Assessment", mode: "assessments", editingId: id, fields: [
+    inputField("assessment_reference_no", "Reference No.", "text", item?.assessment_reference_no || nextAssessmentReference(), false),
+    inputField("assessment_title", "Assessment Title", "text", item?.assessment_title || "Business Assessment", true),
+    selectField("assessment_type_id", "Assessment Type", assessmentTypeOptions(), item?.assessment_type_id, false),
+    selectField("template_id", "Template", assessmentTemplateOptions(), item?.template_id, false),
+    selectField("branch_name", "Branch", branchOptions(), item?.branch_name, false),
+    selectField("department_id", "Department", departmentOptions(), item?.department_id, false),
+    selectField("workspace_id", "Workspace / Product Line", productLineOptions(), item?.workspace_id || item?.product_line_id, false),
+    selectField("sop_id", "Related SOP", sopOptions(), item?.sop_id, false),
+    inputField("assessed_area_name", "Area / Process", "text", item?.assessed_area_name, false),
+    inputField("assessed_business_name", "External Business / Supplier", "text", item?.assessed_business_name, false),
+    inputField("assessed_address", "Address", "text", item?.assessed_address, false),
+    inputField("contact_person", "Contact Person", "text", item?.contact_person, false),
+    inputField("contact_number", "Contact Number", "text", item?.contact_number, false),
+    inputField("assessment_date", "Assessment Date", "date", item?.assessment_date, false),
+    inputField("assessment_start_time", "Start Time", "time", item?.assessment_start_time, false),
+    inputField("assessment_end_time", "End Time", "time", item?.assessment_end_time, false),
+    selectField("evaluator_type", "Evaluator Type", optionSet(["internal", "external", "third_party", "consultant", "regulatory", "other"]), item?.evaluator_type || "internal", true),
+    inputField("evaluator_organization", "Evaluator Organization", "text", item?.evaluator_organization || template?.default_evaluator_organization, false),
+    inputField("evaluator_representative", "Evaluator Representative", "text", item?.evaluator_representative, false),
+    textareaField("purpose", "Purpose", item?.purpose, false), textareaField("scope", "Scope", item?.scope, false),
+    textareaField("reference_guidelines", "Reference Guidelines", item?.reference_guidelines || template?.default_reference_guidelines, false),
+    selectField("assessment_status", "Status", optionSet(["draft", "scheduled", "in_progress", "completed", "reviewed", "approved", "archived"]), item?.assessment_status || "draft", true),
+    inputField("overall_score", "Overall Score", "number", item?.overall_score, false, { min: 0, max: 100, step: "0.01" }),
+    inputField("overall_rating", "Overall Rating", "text", item?.overall_rating, false),
+    textareaField("executive_summary", "Executive Summary", item?.executive_summary, false),
+    textareaField("general_findings", "General Findings", item?.general_findings, false),
+    textareaField("strengths", "Strengths", item?.strengths, false),
+    textareaField("opportunities_for_improvement", "Opportunities for Improvement", item?.opportunities_for_improvement, false),
+    textareaField("confidentiality_note", "Confidentiality Note", item?.confidentiality_note || template?.default_confidentiality_note, false),
+    selectField("prepared_by", "Prepared By", peopleOptions(), item?.prepared_by, false),
+    selectField("reviewed_by", "Reviewed By", peopleOptions(), item?.reviewed_by, false),
+    selectField("approved_by", "Approved By", peopleOptions(), item?.approved_by, false)
+  ]});
+}
+
+function openAssessmentTemplateModal(id = null) {
+  const item = id ? state.assessmentTemplates.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Assessment Template" : "Create Assessment Template", mode: "assessment_templates", editingId: id, fields: [
+    inputField("template_name", "Template Name", "text", item?.template_name, true),
+    selectField("assessment_type_id", "Assessment Type", assessmentTypeOptions(), item?.assessment_type_id, false),
+    textareaField("description", "Description", item?.description, false),
+    inputField("industry", "Industry", "text", item?.industry, false),
+    selectField("business_type", "Business Type", [{ value: "", label: "Any business type" }, ...businessTypeOptions()], item?.business_type, false),
+    selectField("scoring_method", "Scoring Method", optionSet(["custom", "percentage", "numeric", "pass_fail", "star_1_5"]), item?.scoring_method || "custom", true),
+    inputField("default_evaluator_organization", "Default Evaluator Organization", "text", item?.default_evaluator_organization, false),
+    textareaField("default_reference_guidelines", "Default Reference Guidelines", item?.default_reference_guidelines, false),
+    textareaField("default_confidentiality_note", "Default Confidentiality Note", item?.default_confidentiality_note, false),
+    checkboxField("is_active", "Active Template", item?.is_active !== false)
+  ]});
+}
+
+function openAssessmentTemplateSectionModal(id = null, templateId = "") {
+  const item = id ? state.assessmentTemplateSections.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Template Section" : "Add Template Section", mode: "assessment_template_sections", editingId: id, fields: [selectField("template_id", "Template", assessmentTemplateOptions(), item?.template_id || templateId, true), inputField("section_title", "Section Title", "text", item?.section_title, true), textareaField("section_description", "Description", item?.section_description, false), inputField("sort_order", "Sort Order", "number", item?.sort_order ?? 0, true), checkboxField("is_required", "Required", item?.is_required !== false)] });
+}
+
+function openAssessmentSectionModal(id = null, assessmentId = "") {
+  const item = id ? state.assessmentSections.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Assessment Section" : "Add Assessment Section", mode: "assessment_sections", editingId: id, fields: [selectField("assessment_id", "Assessment", assessmentOptions(), item?.assessment_id || assessmentId, true), inputField("section_title", "Section Title", "text", item?.section_title, true), textareaField("section_description", "Description", item?.section_description, false), inputField("sort_order", "Sort Order", "number", item?.sort_order ?? 0, true), inputField("section_score", "Score", "number", item?.section_score, false, { min: 0, max: 100, step: "0.01" }), inputField("section_rating", "Rating", "text", item?.section_rating, false), textareaField("section_summary", "Summary", item?.section_summary, false)] });
+}
+
+function openAssessmentFindingModal(id = null, assessmentId = "") {
+  const item = id ? state.assessmentFindings.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Assessment Finding" : "Add Assessment Finding", mode: "assessment_findings", editingId: id, fields: [
+    selectField("assessment_id", "Assessment", assessmentOptions(), item?.assessment_id || assessmentId, true), selectField("section_id", "Section", assessmentSectionOptions(item?.assessment_id || assessmentId), item?.section_id, false), textareaField("question_text", "Question / Criterion", item?.question_text, false), textareaField("expected_standard", "Expected Standard", item?.expected_standard, false), textareaField("observation", "Observation", item?.observation, true), textareaField("evidence_summary", "Evidence Summary", item?.evidence_summary, false), inputField("rating", "Rating", "text", item?.rating, false), inputField("score", "Score", "number", item?.score, false, { min: 0, max: 100, step: "0.01" }), selectField("compliance_result", "Compliance Result", optionSet(["compliant", "not_compliant", "partially_compliant", "not_applicable", "needs_follow_up"]), item?.compliance_result || "needs_follow_up", true), selectField("severity", "Severity", optionSet(["low", "medium", "high", "critical"]), item?.severity || "medium", true), selectField("finding_type", "Finding Type", optionSet(["strength", "observation", "minor_issue", "major_issue", "critical_issue", "opportunity_for_improvement"]), item?.finding_type || "observation", true), textareaField("recommendation", "Recommendation", item?.recommendation, false), checkboxField("requires_corrective_action", "Requires Corrective Action", Boolean(item?.requires_corrective_action)), selectField("responsible_person_id", "Responsible Person", peopleOptions(), item?.responsible_person_id, false), inputField("target_completion_date", "Target Completion Date", "date", item?.target_completion_date, false), selectField("finding_status", "Finding Status", optionSet(["open", "in_progress", "corrected", "verified", "closed", "waived"]), item?.finding_status || "open", true)
+  ]});
+}
+
+function openAssessmentCorrectiveActionModal(id = null, findingId = "") {
+  const finding = state.assessmentFindings.find((record) => record.id === findingId);
+  const item = id ? state.assessmentCorrectiveActions.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Corrective Action" : "Add Corrective Action", mode: "assessment_corrective_actions", editingId: id, fields: [selectField("assessment_id", "Assessment", assessmentOptions(), item?.assessment_id || finding?.assessment_id, true), selectField("finding_id", "Finding", assessmentFindingOptions(), item?.finding_id || findingId, false), inputField("action_title", "Action Title", "text", item?.action_title || finding?.recommendation || "Corrective Action", true), textareaField("root_cause", "Root Cause", item?.root_cause, false), textareaField("correction", "Correction", item?.correction, false), textareaField("corrective_action", "Corrective Action", item?.corrective_action || finding?.recommendation, false), textareaField("preventive_action", "Preventive Action", item?.preventive_action, false), selectField("assigned_to", "Assigned To", peopleOptions(), item?.assigned_to || finding?.responsible_person_id, false), inputField("due_date", "Due Date", "date", item?.due_date || finding?.target_completion_date, false), selectField("verified_by", "Verified By", peopleOptions(), item?.verified_by, false), textareaField("verification_result", "Verification Result", item?.verification_result, false), selectField("action_status", "Action Status", optionSet(["open", "assigned", "in_progress", "completed", "verified", "closed", "overdue"]), item?.action_status || "open", true), textareaField("remarks", "Remarks", item?.remarks, false)] });
+}
+
+function openAssessmentReportModal(id = null, assessmentId = "") {
+  const assessment = state.assessments.find((record) => record.id === assessmentId);
+  const item = id ? state.assessmentReports.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Assessment Report" : "Generate Assessment Report", mode: "assessment_reports", editingId: id, fields: [selectField("assessment_id", "Assessment", assessmentOptions(), item?.assessment_id || assessmentId, true), inputField("report_title", "Report Title", "text", item?.report_title || `${assessment?.assessment_title || "Assessment"} Report`, true), inputField("report_reference_no", "Report Reference No.", "text", item?.report_reference_no || nextAssessmentReportReference(), false), selectField("report_status", "Report Status", optionSet(["draft", "generated", "under_review", "approved", "archived"]), item?.report_status || "generated", true), selectField("reviewed_by", "Reviewed By", peopleOptions(), item?.reviewed_by, false), selectField("approved_by", "Approved By", peopleOptions(), item?.approved_by, false), inputField("pdf_url", "PDF URL", "url", item?.pdf_url, false)] });
+}
+
+function openAssessmentRatingScaleModal(id = null, templateId = "") {
+  const item = id ? state.assessmentRatingScales.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Rating Scale" : "Add Rating Scale", mode: "assessment_rating_scales", editingId: id, fields: [selectField("template_id", "Template", assessmentTemplateOptions(), item?.template_id || templateId, true), inputField("rating_value", "Rating Value", "text", item?.rating_value, true), inputField("rating_label", "Rating Label", "text", item?.rating_label, true), textareaField("rating_description", "Description", item?.rating_description, false), inputField("min_score", "Min Score", "number", item?.min_score, false, { min: 0, max: 100, step: "0.01" }), inputField("max_score", "Max Score", "number", item?.max_score, false, { min: 0, max: 100, step: "0.01" }), inputField("sort_order", "Sort Order", "number", item?.sort_order ?? 0, true)] });
+}
+
+function printAssessmentReport(assessmentId) {
+  const assessment = state.assessments.find((item) => item.id === assessmentId);
+  if (!assessment) return showToast("Assessment record was not found.", "error");
+  const findings = state.assessmentFindings.filter((item) => item.assessment_id === assessment.id);
+  const actions = state.assessmentCorrectiveActions.filter((item) => item.assessment_id === assessment.id);
+  const sectionRows = state.assessmentSections.filter((item) => item.assessment_id === assessment.id).map((item) => [item.section_title, item.section_rating || "", item.section_score ?? "", item.section_summary || ""]);
+  const findingRows = findings.map((item) => [assessmentSectionTitle(item.section_id) || "General", item.observation || item.question_text || "Observation", formattedRoleLabel(item.compliance_result), formattedRoleLabel(item.severity), item.recommendation || ""]);
+  const actionRows = actions.map((item) => [item.action_title || "Action", peopleNameRaw(item.assigned_to), formatDate(item.due_date), formattedRoleLabel(item.action_status)]);
+  elements.printArea.innerHTML = `<div class="sop-summary-print assessment-print"><section class="sop-summary-document"><h1>${escapeHtml(assessment.assessment_title || "Assessment Report")}</h1><table class="document-control-table"><tbody><tr><th>Reference</th><td>${escapeHtml(assessment.assessment_reference_no || "Not assigned")}</td><th>Status</th><td>${formattedRoleLabel(assessment.assessment_status || "draft")}</td></tr><tr><th>Type</th><td>${escapeHtml(assessmentTypeName(assessment.assessment_type_id) || "Custom")}</td><th>Date</th><td>${formatDate(assessment.assessment_date)}</td></tr><tr><th>Scope</th><td>${escapeHtml(assessmentScopeLabel(assessment))}</td><th>Score</th><td>${escapeHtml(assessment.overall_score ?? "Not scored")}</td></tr></tbody></table><section class="monitoring-report-section"><h2>Purpose and Scope</h2><p>${escapeHtml(assessment.purpose || "No purpose recorded.")}</p><p>${escapeHtml(assessment.scope || "No scope recorded.")}</p></section><section class="monitoring-report-section"><h2>Reference Guidelines</h2><p>${escapeHtml(assessment.reference_guidelines || "No reference guidelines recorded.")}</p></section><section class="monitoring-report-section"><h2>Section Summary</h2>${assessmentPrintTable(["Section", "Rating", "Score", "Summary"], sectionRows, "No sections recorded.")}</section><section class="monitoring-report-section"><h2>Findings</h2>${assessmentPrintTable(["Section", "Observation", "Result", "Severity", "Recommendation"], findingRows, "No findings recorded.")}</section><section class="monitoring-report-section"><h2>Corrective Actions</h2>${assessmentPrintTable(["Action", "Assigned To", "Due", "Status"], actionRows, "No corrective actions recorded.")}</section><section class="monitoring-report-section"><h2>Summary</h2><p>${escapeHtml(assessment.executive_summary || assessment.general_findings || "No summary recorded.")}</p><p>${escapeHtml(assessment.confidentiality_note || "Assessment findings are intended for review, accountability, and continuous improvement.")}</p></section><table class="signature-table"><tbody><tr><td>Prepared By<br><strong>${peopleNameRaw(assessment.prepared_by)}</strong></td><td>Reviewed By<br><strong>${peopleNameRaw(assessment.reviewed_by)}</strong></td><td>Approved By<br><strong>${peopleNameRaw(assessment.approved_by)}</strong></td></tr></tbody></table></section></div>`;
+  window.setTimeout(() => window.print(), 150);
+}
+
+function assessmentPrintTable(headers, rows, emptyMessage) {
+  if (!rows.length) return `<p>${escapeHtml(emptyMessage)}</p>`;
+  return `<table><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function exportAssessmentsCsv() {
+  downloadCsv("assessment-audit-records.csv", state.assessments.map((item) => ({ Reference: item.assessment_reference_no, Title: item.assessment_title, Type: assessmentTypeName(item.assessment_type_id), Scope: assessmentScopeLabel(item), Date: item.assessment_date, Status: formattedRoleLabel(item.assessment_status), Score: item.overall_score, Rating: item.overall_rating })));
+}
+
+function optionSet(values) { return values.map((value) => ({ value, label: formattedRoleLabel(value) })); }
+function assessmentTypeOptions() { return state.assessmentTypes.map((item) => ({ value: item.id, label: item.type_name })); }
+function assessmentTemplateOptions() { return state.assessmentTemplates.filter((item) => item.is_active !== false).map((item) => ({ value: item.id, label: item.template_name })); }
+function assessmentOptions() { return state.assessments.map((item) => ({ value: item.id, label: `${item.assessment_reference_no || "Assessment"} - ${item.assessment_title || "Untitled"}` })); }
+function assessmentSectionOptions(assessmentId = "") { return state.assessmentSections.filter((item) => !assessmentId || item.assessment_id === assessmentId).map((item) => ({ value: item.id, label: item.section_title })); }
+function assessmentFindingOptions() { return state.assessmentFindings.map((item) => ({ value: item.id, label: `${assessmentTitle(item.assessment_id)} - ${item.observation || item.question_text || "Finding"}` })); }
+function branchOptions() { const branches = Array.isArray(state.companySettings?.branches) ? state.companySettings.branches : []; return textOptions([...branches.map((branch) => typeof branch === "string" ? branch : branch?.name || branch?.branch_name), ...state.assessments.map((item) => item.branch_name)].filter(Boolean)); }
+function assessmentTypeName(id) { return state.assessmentTypes.find((item) => item.id === id)?.type_name || ""; }
+function assessmentTitle(id) { return state.assessments.find((item) => item.id === id)?.assessment_title || "Assessment"; }
+function assessmentSectionTitle(id) { return state.assessmentSections.find((item) => item.id === id)?.section_title || ""; }
+function assessmentScopeLabel(item) { return item.assessed_area_name || departmentNameRaw(item.department_id) || productLineNameRaw(item.workspace_id || item.product_line_id) || item.assessed_business_name || item.branch_name || "General"; }
+function nextAssessmentReference() { return `ASM-${new Date().getFullYear()}-${String(state.assessments.length + 1).padStart(4, "0")}`; }
+function nextAssessmentReportReference() { return `ASR-${new Date().getFullYear()}-${String(state.assessmentReports.length + 1).padStart(4, "0")}`; }
+
+window.openAssessmentModal = openAssessmentModal;
+window.openAssessmentTemplateModal = openAssessmentTemplateModal;
+window.openAssessmentTemplateSectionModal = openAssessmentTemplateSectionModal;
+window.openAssessmentSectionModal = openAssessmentSectionModal;
+window.openAssessmentFindingModal = openAssessmentFindingModal;
+window.openAssessmentCorrectiveActionModal = openAssessmentCorrectiveActionModal;
+window.openAssessmentReportModal = openAssessmentReportModal;
+window.openAssessmentRatingScaleModal = openAssessmentRatingScaleModal;
+window.printAssessmentReport = printAssessmentReport;
+window.exportAssessmentsCsv = exportAssessmentsCsv;
+
+
+
+
+async function ensureAssessmentSectionsFromTemplate(assessment) {
+  if (!assessment?.id || !assessment.template_id) return;
+  const existing = state.assessmentSections.some((section) => section.assessment_id === assessment.id);
+  if (existing) return;
+  const templateSections = state.assessmentTemplateSections
+    .filter((section) => section.template_id === assessment.template_id)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  if (!templateSections.length) return;
+  try {
+    await db.from("assessment_sections").insert(templateSections.map((section) => ({
+      assessment_id: assessment.id,
+      section_title: section.section_title,
+      section_description: section.section_description || null,
+      sort_order: section.sort_order || 0
+    })));
+  } catch (error) {
+    console.warn("Assessment section copy skipped:", error.message);
+  }
+}
+
+async function notifyAssessmentStakeholders(assessment, title, message) {
+  const recipientIds = uniqueLabels([assessment.generated_by, assessment.created_by, state.session?.user?.id].filter(Boolean));
+  await Promise.all(recipientIds.map((recipientUserId) => createNotification({
+    recipientUserId,
+    title,
+    message,
+    type: "assessment",
+    relatedTable: "assessments",
+    relatedRecordId: assessment.id
+  })));
+}
+
+// Assessment & Audit prompt completion: generic rating engine and CSA-ready reporting.
+function normalizeAssessmentRatingMethod(value) {
+  const method = String(value || "custom").toLowerCase();
+  if (["star", "stars", "star_1_5"].includes(method)) return "stars";
+  if (["passfail", "pass_fail", "pass-fail"].includes(method)) return "pass_fail";
+  if (["percent", "percentage"].includes(method)) return "percentage";
+  if (["number", "numeric"].includes(method)) return "numeric";
+  return "custom";
+}
+
+function assessmentTemplateForAssessment(assessment = {}) {
+  return state.assessmentTemplates.find((template) => template.id === assessment.template_id) || {};
+}
+
+function assessmentForChildRecord(record = {}) {
+  return state.assessments.find((assessment) => assessment.id === record.assessment_id) || {};
+}
+
+function assessmentRatingMethod(record = {}) {
+  const template = record.template_id
+    ? state.assessmentTemplates.find((item) => item.id === record.template_id)
+    : assessmentTemplateForAssessment(assessmentForChildRecord(record));
+  return normalizeAssessmentRatingMethod(record.rating_method || record.scoring_method || template?.rating_method || template?.scoring_method || "custom");
+}
+
+function assessmentRatingScaleLabel(value, templateId = "") {
+  const match = state.assessmentRatingScales.find((scale) => {
+    return (!templateId || scale.template_id === templateId) && [scale.id, scale.rating_value, scale.rating_label].includes(value);
+  });
+  return match?.rating_label || value || "";
+}
+
+function assessmentRatingDisplay(record = {}, scope = "overall") {
+  const method = assessmentRatingMethod(record);
+  const template = record.template_id ? state.assessmentTemplates.find((item) => item.id === record.template_id) : assessmentTemplateForAssessment(assessmentForChildRecord(record));
+  const prefix = scope === "overall" ? "overall_" : "";
+  const percentage = record[`${prefix}percentage_value`] ?? record.overall_score ?? record.section_score ?? record.score;
+  const star = record[`${prefix}star_value`] ?? record.star_value;
+  const numeric = record[`${prefix}numeric_value`] ?? record.numeric_value ?? record.score_value;
+  const passFail = record[`${prefix}pass_fail_value`] ?? record.pass_fail_value;
+  const custom = record[`${prefix}custom_scale_id`] ?? record.custom_scale_id ?? record.overall_rating ?? record.section_rating ?? record.rating;
+  if (method === "percentage") return percentage !== null && percentage !== undefined ? `${Number(percentage).toFixed(Number(percentage) % 1 ? 2 : 0)}%` : "Not rated";
+  if (method === "stars") {
+    const max = Number(record.star_max || template?.star_max || 5);
+    const filled = Math.max(0, Math.min(max, Math.round(Number(star || 0))));
+    return filled ? `${"★".repeat(filled)}${"☆".repeat(Math.max(0, max - filled))} ${filled}/${max}` : "Not rated";
+  }
+  if (method === "pass_fail") return passFail ? formattedRoleLabel(passFail) : "Not rated";
+  if (method === "numeric") {
+    const max = record.numeric_max ?? template?.numeric_max;
+    return numeric !== null && numeric !== undefined ? `${numeric}${max !== null && max !== undefined ? ` / ${max}` : ""}` : "Not rated";
+  }
+  return assessmentRatingScaleLabel(custom, record.template_id || template?.id) || "Not rated";
+}
+
+function assessmentRatingChip(record = {}, scope = "overall") {
+  const method = assessmentRatingMethod(record);
+  const text = assessmentRatingDisplay(record, scope);
+  const pass = record.overall_pass_fail_value || record.pass_fail_value;
+  const compliance = record.compliance_level || record.overall_compliance_level || record.compliance_result;
+  const danger = pass === "fail" || compliance === "not_compliant" || ["high", "critical"].includes(record.severity);
+  const warning = !danger && (pass === "conditional" || ["partially_compliant", "needs_follow_up"].includes(compliance) || record.severity === "medium");
+  return `<span class="rating-chip ${method} ${danger ? "danger" : warning ? "warning" : ""}">${escapeHtml(text)}</span>`;
+}
+
+function assessmentDashboardMetrics(records, actions, findings) {
+  const methods = uniqueLabels(records.map((item) => assessmentRatingMethod(item)).filter(Boolean));
+  const percentRecords = records.filter((item) => assessmentRatingMethod(item) === "percentage" && item.overall_percentage_value !== null && item.overall_percentage_value !== undefined);
+  const starRecords = records.filter((item) => assessmentRatingMethod(item) === "stars" && item.overall_star_value !== null && item.overall_star_value !== undefined);
+  const average = methods.length === 1 && methods[0] === "percentage" && percentRecords.length
+    ? `${Math.round(percentRecords.reduce((sum, item) => sum + Number(item.overall_percentage_value || 0), 0) / percentRecords.length)}%`
+    : methods.length === 1 && methods[0] === "stars" && starRecords.length
+      ? `${(starRecords.reduce((sum, item) => sum + Number(item.overall_star_value || 0), 0) / starRecords.length).toFixed(1)}★`
+      : records.length ? "Mixed" : "None";
+  const failed = records.filter((item) => {
+    const threshold = Number(item.passing_threshold || assessmentTemplateForAssessment(item)?.passing_threshold || 0);
+    return item.overall_pass_fail_value === "fail" || item.compliance_level === "not_compliant" || (assessmentRatingMethod(item) === "percentage" && threshold && Number(item.overall_percentage_value || 0) < threshold);
+  }).length;
+  return [
+    ["Total", records.length],
+    ["Scheduled", records.filter((item) => item.assessment_status === "scheduled").length],
+    ["In Progress", records.filter((item) => item.assessment_status === "in_progress").length],
+    ["Completed", records.filter((item) => ["completed", "reviewed", "approved"].includes(item.assessment_status)).length],
+    ["Attention", failed + findings.filter((item) => ["open", "in_progress"].includes(item.finding_status) && ["high", "critical"].includes(item.severity)).length],
+    ["Open Actions", actions.filter((item) => !["verified", "closed"].includes(item.action_status)).length],
+    ["Average", average]
+  ];
+}
+
+function ratingMethodOptions() {
+  return [
+    { value: "custom", label: "Custom Scale" },
+    { value: "percentage", label: "Percentage" },
+    { value: "stars", label: "Stars" },
+    { value: "pass_fail", label: "Pass / Fail" },
+    { value: "numeric", label: "Numeric" }
+  ];
+}
+
+function passFailOptions() {
+  return optionSet(["pass", "fail", "conditional", "not_applicable"]);
+}
+
+function customRatingOptions(templateId = "") {
+  if (!templateId) return [];
+  return state.assessmentRatingScales
+    .filter((scale) => scale.template_id === templateId && scale.is_active !== false)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+    .map((scale) => ({ value: scale.id, label: scale.rating_label || scale.rating_value }));
+}
+
+function assessmentTemplateRatingMethod(templateId = "") {
+  const template = state.assessmentTemplates.find((item) => item.id === templateId);
+  return normalizeAssessmentRatingMethod(template?.rating_method || template?.scoring_method || "custom");
+}
+
+function isCsaAssessmentTypeId(typeId = "") {
+  const name = assessmentTypeName(typeId).toLowerCase();
+  return name.includes("csa business consultancy") || name.includes("csa consultancy");
+}
+
+function ensureAssessmentRatingFields(form, method = "stars") {
+  if (!form || form.elements.rating_method) return;
+  const grid = form.querySelector(".form-grid") || form;
+  const wrapper = document.createElement("div");
+  wrapper.className = "assessment-injected-rating-fields";
+  wrapper.innerHTML = assessmentRatingFields({ rating_method: method }, "overall", form.elements.template_id?.value || "");
+  grid.appendChild(wrapper);
+}
+
+function assessmentRatingFields(item = {}, scope = "overall", templateId = "") {
+  const method = assessmentRatingMethod({ ...item, template_id: templateId || item.template_id });
+  const prefix = scope === "overall" ? "overall_" : "";
+  return [
+    selectField("rating_method", "Rating Method", ratingMethodOptions(), item.rating_method || method, true),
+    `<div class="rating-method-field" data-rating-method-field="percentage">${inputField(`${prefix}percentage_value`, "Percentage Rating", "number", item[`${prefix}percentage_value`] ?? item.overall_score ?? item.section_score ?? item.score, false, { min: 0, max: 100, step: "0.01" })}</div>`,
+    `<div class="rating-method-field" data-rating-method-field="stars">${assessmentStarPicker(`${prefix}star_value`, "Star Rating", item[`${prefix}star_value`] ?? item.star_value, item.star_max)}</div>`,
+    `<div class="rating-method-field" data-rating-method-field="pass_fail">${selectField(`${prefix}pass_fail_value`, "Pass / Fail Rating", passFailOptions(), item[`${prefix}pass_fail_value`] ?? item.pass_fail_value, false)}</div>`,
+    `<div class="rating-method-field" data-rating-method-field="numeric">${inputField(`${prefix}numeric_value`, "Numeric Rating", "number", item[`${prefix}numeric_value`] ?? item.numeric_value ?? item.score_value, false, { step: "0.01" })}</div>`,
+    `<div class="rating-method-field" data-rating-method-field="custom" data-assessment-custom-rating-field data-rating-scope="${escapeAttribute(scope)}">${assessmentCustomRatingControl(scope, item, templateId || item.template_id)}</div>`
+  ].join("");
+}
+
+function assessmentCustomRatingControl(scope = "overall", item = {}, templateId = "") {
+  const prefix = scope === "overall" ? "overall_" : "";
+  const name = `${prefix}custom_scale_id`;
+  const options = customRatingOptions(templateId);
+  if (options.length) {
+    return selectField(name, "Custom Rating", options, item[`${prefix}custom_scale_id`] ?? item.custom_scale_id, false);
+  }
+  const message = templateId ? "No custom ratings configured for this template" : "Select a template first";
+  return `<label>Custom Rating
+    <select name="${escapeAttribute(name)}" disabled>
+      <option value="">${escapeHtml(message)}</option>
+    </select>
+    <span class="field-hint">Create rating scale rows under the selected template to use Custom Scale.</span>
+  </label>`;
+}
+
+function assessmentStarPicker(name, label, value = "", max = 5) {
+  const starMax = Math.max(1, Math.min(10, Number(max || 5)));
+  const current = Number(value || 0);
+  const buttons = Array.from({ length: starMax }, (_, index) => {
+    const rating = index + 1;
+    return `<button class="star-rating-button ${rating <= current ? "is-selected" : ""}" type="button" data-star-value="${rating}" aria-label="${rating} star${rating === 1 ? "" : "s"}">★</button>`;
+  }).join("");
+  return `<label class="star-rating-label">${escapeHtml(label)}
+    <input type="hidden" name="${escapeAttribute(name)}" value="${escapeAttribute(value ?? "")}">
+    <span class="star-rating-control" data-star-rating-control data-star-input="${escapeAttribute(name)}">
+      ${buttons}
+      <button class="star-rating-clear" type="button" data-star-value="" aria-label="Clear star rating">Clear</button>
+    </span>
+  </label>`;
+}
+
+function setupAssessmentRatingControls(form) {
+  if (!form) return;
+  const csaSelected = state.modalMode === "assessments" && isCsaAssessmentTypeId(form.elements.assessment_type_id?.value);
+  if (csaSelected) {
+    ensureAssessmentRatingFields(form, "stars");
+    if (form.elements.rating_method) form.elements.rating_method.value = "stars";
+    if (form.elements.assessment_source) form.elements.assessment_source.value = "consultant";
+    if (form.elements.evaluator_type) form.elements.evaluator_type.value = "consultant";
+    if (form.elements.evaluator_organization && !form.elements.evaluator_organization.value) {
+      form.elements.evaluator_organization.value = "CSA Business Consultancy";
+    }
+  }
+  const methodInput = form.elements.rating_method || form.elements.scoring_method;
+  if (!methodInput && state.modalMode !== "assessment_templates") return;
+  if (state.modalMode === "assessments" && form.elements.template_id && !form.elements.rating_method?.value) {
+    form.elements.rating_method.value = assessmentTemplateRatingMethod(form.elements.template_id.value);
+  }
+  if (state.modalMode !== "assessment_templates" && form.elements.assessment_id) {
+    const assessment = state.assessments.find((item) => item.id === form.elements.assessment_id.value);
+    if (assessment && form.elements.rating_method && !form.elements.rating_method.value) {
+      form.elements.rating_method.value = assessmentRatingMethod(assessment);
+    }
+  }
+  refreshAssessmentCustomRatingFields(form);
+  const sync = () => {
+    const method = normalizeAssessmentRatingMethod((form.elements.rating_method || form.elements.scoring_method)?.value);
+    form.querySelectorAll("[data-rating-method-field]").forEach((field) => {
+      field.hidden = field.dataset.ratingMethodField !== method;
+    });
+  };
+  form.querySelectorAll("[data-star-rating-control]").forEach((control) => {
+    if (control.dataset.bound === "true") return;
+    control.dataset.bound = "true";
+    const input = form.elements[control.dataset.starInput];
+    const paint = (value) => {
+      const selected = Number(value || 0);
+      control.querySelectorAll(".star-rating-button").forEach((button) => {
+        button.classList.toggle("is-selected", Number(button.dataset.starValue || 0) <= selected);
+      });
+    };
+    const preview = (value) => {
+      const hovered = Number(value || 0);
+      control.querySelectorAll(".star-rating-button").forEach((button) => {
+        button.classList.toggle("is-preview", hovered > 0 && Number(button.dataset.starValue || 0) <= hovered);
+      });
+    };
+    control.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-star-value]");
+      if (!button || !input) return;
+      input.value = button.dataset.starValue || "";
+      paint(input.value);
+    });
+    control.addEventListener("pointerover", (event) => {
+      const button = event.target.closest(".star-rating-button");
+      if (button) preview(button.dataset.starValue);
+    });
+    control.addEventListener("pointerleave", () => preview(""));
+    paint(input?.value);
+  });
+  methodInput?.addEventListener("change", sync);
+  sync();
+}
+
+function refreshAssessmentCustomRatingFields(form) {
+  form.querySelectorAll("[data-assessment-custom-rating-field]").forEach((field) => {
+    const scope = field.dataset.ratingScope || "overall";
+    let templateId = form.elements.template_id?.value || "";
+    if (!templateId && form.elements.assessment_id?.value) {
+      templateId = state.assessments.find((item) => item.id === form.elements.assessment_id.value)?.template_id || "";
+    }
+    field.innerHTML = assessmentCustomRatingControl(scope, {}, templateId);
+  });
+}
+
+function applyAssessmentRatingPayload(payload, scope = "overall") {
+  const method = normalizeAssessmentRatingMethod(payload.rating_method || payload.scoring_method || payload.method);
+  const prefix = scope === "overall" ? "overall_" : "";
+  payload.rating_method = method;
+  if (scope === "overall") payload.scoring_method = payload.scoring_method || method;
+  if (method === "percentage") {
+    payload.overall_score = payload.overall_percentage_value ?? payload.overall_score ?? payload.percentage_value ?? null;
+    payload.score = payload.percentage_value ?? payload.score ?? null;
+  } else if (method === "numeric") {
+    payload.overall_score = payload.overall_numeric_value ?? payload.overall_score ?? null;
+    payload.score = payload.numeric_value ?? payload.score ?? null;
+  } else if (method === "stars") {
+    payload.overall_rating = payload.overall_star_value ? `${payload.overall_star_value} stars` : payload.overall_rating || null;
+    payload.rating = payload.star_value ? `${payload.star_value} stars` : payload.rating || null;
+  } else if (method === "pass_fail") {
+    payload.overall_rating = payload.overall_pass_fail_value || payload.overall_rating || null;
+    payload.rating = payload.pass_fail_value || payload.rating || null;
+  } else {
+    payload.overall_rating = payload.overall_custom_scale_id || payload.overall_rating || payload.rating || null;
+    payload.rating = payload.custom_scale_id || payload.rating || null;
+  }
+  if (scope === "section") {
+    payload.section_score = method === "percentage" ? payload.percentage_value ?? payload.section_score ?? null : method === "numeric" ? payload.numeric_value ?? payload.section_score ?? null : payload.section_score || null;
+    payload.section_rating = payload.custom_scale_id || payload.pass_fail_value || payload.star_value || payload.rating || payload.section_rating || null;
+  }
+  if (scope === "finding") {
+    payload.rating = payload.custom_scale_id || payload.pass_fail_value || payload.star_value || payload.percentage_value || payload.numeric_value || payload.rating || null;
+  }
+  Object.keys(payload).forEach((key) => {
+    if (key.startsWith(prefix) && payload[key] === "") payload[key] = null;
+  });
+}
+
+function renderAssessmentDashboardSection() {
+  const cards = elements.assessmentDashboardCards;
+  const table = elements.recentAssessmentsDashboardTable;
+  if (!cards && !table) return;
+  const records = canViewAssessments() ? state.assessments : [];
+  const actions = canViewAssessments() ? state.assessmentCorrectiveActions : [];
+  const findings = canViewAssessments() ? state.assessmentFindings : [];
+  const data = assessmentDashboardMetrics(records, actions, findings);
+  if (cards) cards.innerHTML = data.map(([label, value]) => `<article class="summary-card ${["Attention", "Open Actions"].includes(label) ? "alert" : ""}"><span>${label}</span><strong>${value}</strong></article>`).join("");
+  if (table) {
+    const latest = [...records].sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)).slice(0, 5);
+    table.innerHTML = renderRows(latest, (item) => `
+      <tr>
+        <td><strong>${escapeHtml(item.assessment_title || "Untitled Assessment")}</strong><span class="muted-action">${escapeHtml(item.assessment_reference_no || assessmentTypeName(item.assessment_type_id) || "No reference")}</span></td>
+        <td>${escapeHtml(assessmentScopeLabel(item))}</td>
+        <td><span class="status-pill ${item.assessment_status === "draft" ? "warning" : ""}">${formattedRoleLabel(item.assessment_status || "draft")}</span></td>
+        <td>${assessmentRatingChip(item)}</td>
+        <td>${formatDate(item.assessment_date || item.created_at)}</td>
+      </tr>
+    `, 5, canUseAssessmentTables() ? "No assessments yet." : "Run the assessment SQL migration first.");
+  }
+}
+
+function renderAssessments() {
+  if (!elements.assessmentTable) return;
+  const records = canViewAssessments() ? state.assessments : [];
+  elements.assessmentTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.assessment_title || "Untitled Assessment")}</strong><span class="muted-action">${escapeHtml(item.assessment_reference_no || "No reference")}</span></td>
+      <td>${escapeHtml(assessmentTypeName(item.assessment_type_id) || "Custom")}</td>
+      <td>${escapeHtml(assessmentScopeLabel(item))}</td>
+      <td>${formatDate(item.assessment_date)}</td>
+      <td><span class="status-pill ${item.assessment_status === "draft" ? "warning" : ""}">${formattedRoleLabel(item.assessment_status || "draft")}</span></td>
+      <td>${assessmentRatingChip(item)}</td>
+      <td class="actions-cell"><div class="table-actions"><button type="button" onclick="printAssessmentReport('${escapeAttribute(item.id)}')">Print</button>${canManageAssessments() ? `<button type="button" onclick="openAssessmentModal('${escapeAttribute(item.id)}')">Edit</button><button type="button" onclick="openAssessmentSectionModal('', '${escapeAttribute(item.id)}')">Section</button><button type="button" onclick="openAssessmentReportModal('', '${escapeAttribute(item.id)}')">Report</button>${canDeleteRecords() ? `<button class="delete-action" type="button" onclick="deleteRecord('assessments', '${escapeAttribute(item.id)}')">Delete</button>` : ""}` : ""}</div></td>
+    </tr>
+  `, 7, canUseAssessmentTables() ? "No assessment records found." : "Run the assessment SQL migration first.");
+}
+
+function renderAssessmentTemplates() {
+  if (!elements.assessmentTemplatesTable) return;
+  const records = canViewAssessments() ? state.assessmentTemplates : [];
+  elements.assessmentTemplatesTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.template_name || "Untitled Template")}</strong><span class="muted-action">${escapeHtml(item.description || "Reusable criteria")}</span></td>
+      <td>${escapeHtml(assessmentTypeName(item.assessment_type_id) || "Custom")}</td>
+      <td>${formattedRoleLabel(assessmentRatingMethod(item))}</td>
+      <td>${state.assessmentTemplateSections.filter((section) => section.template_id === item.id).length}</td>
+      <td>${state.assessmentRatingScales.filter((scale) => scale.template_id === item.id).length}</td>
+      <td><span class="status-pill ${item.is_active === false ? "danger" : ""}">${item.is_active === false ? "Inactive" : "Active"}</span></td>
+      <td class="actions-cell"><div class="table-actions">${canManageAssessments() ? `<button type="button" onclick="openAssessmentTemplateModal('${escapeAttribute(item.id)}')">Edit</button><button type="button" onclick="openAssessmentTemplateSectionModal('', '${escapeAttribute(item.id)}')">Section</button><button type="button" onclick="openAssessmentRatingScaleModal('', '${escapeAttribute(item.id)}')">Rating</button>` : ""}</div></td>
+    </tr>
+  `, 7, "No assessment templates found.");
+}
+
+function openAssessmentModal(id = null) {
+  const item = id ? state.assessments.find((record) => record.id === id) : {};
+  const template = state.assessmentTemplates.find((record) => record.id === item?.template_id) || {};
+  const method = assessmentRatingMethod(item || template);
+  openModal({ title: id ? "Edit Assessment" : "Create Assessment", mode: "assessments", editingId: id, fields: [
+    inputField("assessment_reference_no", "Reference No.", "text", item?.assessment_reference_no || nextAssessmentReference(), false),
+    inputField("assessment_title", "Assessment Title", "text", item?.assessment_title || "Business Assessment", true),
+    selectField("assessment_type_id", "Assessment Type", assessmentTypeOptions(), item?.assessment_type_id, false),
+    selectField("template_id", "Template", assessmentTemplateOptions(), item?.template_id, false),
+    assessmentRatingFields({ ...item, rating_method: item?.rating_method || method }, "overall", item?.template_id),
+    selectField("assessment_source", "Assessment Source", optionSet(["internal", "external", "third_party", "consultant", "regulatory", "other"]), item?.assessment_source || item?.evaluator_type || "internal", true),
+    selectField("branch_name", "Branch", branchOptions(), item?.branch_name, false),
+    selectField("department_id", "Department", departmentOptions(), item?.department_id, false),
+    selectField("workspace_id", "Workspace / Business Unit", productLineOptions(), item?.workspace_id || item?.product_line_id, false),
+    selectField("sop_id", "Related SOP", sopOptions(), item?.sop_id, false),
+    inputField("assessed_area_name", "Area / Process", "text", item?.assessed_area_name, false),
+    inputField("assessed_company_name", "Assessed Company / Client", "text", item?.assessed_company_name || item?.assessed_business_name, false),
+    inputField("assessed_location", "Location / Address", "text", item?.assessed_location || item?.assessed_address, false),
+    inputField("contact_person", "Client Contact Person", "text", item?.contact_person, false),
+    inputField("contact_number", "Client Contact Number", "text", item?.contact_number, false),
+    inputField("assessment_date", "Assessment Date", "date", item?.assessment_date, false),
+    inputField("start_time", "Start Time", "time", item?.start_time || item?.assessment_start_time, false),
+    inputField("end_time", "End Time", "time", item?.end_time || item?.assessment_end_time, false),
+    inputField("evaluator_organization", "Evaluator Organization", "text", item?.evaluator_organization || template.default_evaluator_organization, false),
+    inputField("evaluator_representative", "Evaluator Representative", "text", item?.evaluator_representative, false),
+    inputField("evaluator_position", "Evaluator Position", "text", item?.evaluator_position, false),
+    inputField("evaluator_email", "Evaluator Email", "email", item?.evaluator_email, false),
+    inputField("evaluator_contact_number", "Evaluator Contact No.", "text", item?.evaluator_contact_number, false),
+    inputField("evaluator_logo", "Evaluator Logo URL", "url", item?.evaluator_logo || template.default_evaluator_logo, false),
+    inputField("evaluator_signature", "Evaluator Signature URL", "url", item?.evaluator_signature, false),
+    textareaField("purpose", "Purpose", item?.purpose, false),
+    textareaField("scope", "Scope", item?.scope, false),
+    textareaField("reference_guidelines", "Reference Guidelines", item?.reference_guidelines || template.default_reference_guidelines, false),
+    selectField("assessment_status", "Status", optionSet(["draft", "scheduled", "in_progress", "completed", "reviewed", "approved", "archived"]), item?.assessment_status || "draft", true),
+    inputField("compliance_level", "Compliance Level", "text", item?.compliance_level || item?.overall_compliance_level, false),
+    textareaField("executive_summary", "Executive Summary", item?.executive_summary, false),
+    textareaField("findings_summary", "Findings Summary", item?.findings_summary || item?.general_findings, false),
+    textareaField("strengths", "Strengths", item?.strengths, false),
+    textareaField("opportunities_for_improvement", "Opportunities for Improvement", item?.opportunities_for_improvement, false),
+    textareaField("confidentiality_note", "Confidentiality Note", item?.confidentiality_note || template.default_confidentiality_note, false),
+    selectField("prepared_by", "Prepared By", peopleOptions(), item?.prepared_by, false),
+    selectField("reviewed_by", "Reviewed By", peopleOptions(), item?.reviewed_by, false),
+    selectField("approved_by", "Approved By", peopleOptions(), item?.approved_by, false)
+  ]});
+}
+
+function openAssessmentTemplateModal(id = null) {
+  const item = id ? state.assessmentTemplates.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Assessment Template" : "Create Assessment Template", mode: "assessment_templates", editingId: id, fields: [
+    inputField("template_name", "Template Name", "text", item?.template_name, true),
+    selectField("assessment_type_id", "Assessment Type", assessmentTypeOptions(), item?.assessment_type_id, false),
+    textareaField("description", "Description", item?.description, false),
+    inputField("industry", "Industry", "text", item?.industry, false),
+    selectField("business_type", "Business Type", [{ value: "", label: "Any business type" }, ...businessTypeOptions()], item?.business_type, false),
+    selectField("rating_method", "Rating Method", ratingMethodOptions(), assessmentRatingMethod(item), true),
+    inputField("star_max", "Max Stars", "number", item?.star_max || 5, false, { min: 1, step: 1 }),
+    inputField("numeric_min", "Numeric Min", "number", item?.numeric_min, false, { step: "0.01" }),
+    inputField("numeric_max", "Numeric Max", "number", item?.numeric_max, false, { step: "0.01" }),
+    inputField("passing_threshold", "Passing Threshold", "number", item?.passing_threshold, false, { step: "0.01" }),
+    inputField("default_evaluator_organization", "Default Evaluator Organization", "text", item?.default_evaluator_organization, false),
+    inputField("default_evaluator_logo", "Default Evaluator Logo URL", "url", item?.default_evaluator_logo, false),
+    textareaField("default_reference_guidelines", "Default Reference Guidelines", item?.default_reference_guidelines, false),
+    textareaField("default_confidentiality_note", "Default Confidentiality Note", item?.default_confidentiality_note, false),
+    checkboxField("allow_not_applicable", "Allow Not Applicable", item?.allow_not_applicable !== false),
+    checkboxField("is_active", "Active Template", item?.is_active !== false)
+  ]});
+}
+
+function openAssessmentSectionModal(id = null, assessmentId = "") {
+  const item = id ? state.assessmentSections.find((record) => record.id === id) : {};
+  const assessment = state.assessments.find((record) => record.id === (item?.assessment_id || assessmentId)) || {};
+  openModal({ title: id ? "Edit Assessment Section" : "Add Assessment Section", mode: "assessment_sections", editingId: id, fields: [
+    selectField("assessment_id", "Assessment", assessmentOptions(), item?.assessment_id || assessmentId, true),
+    inputField("section_title", "Section Title", "text", item?.section_title, true),
+    textareaField("section_description", "Description", item?.section_description, false),
+    inputField("sort_order", "Sort Order", "number", item?.sort_order ?? 0, true),
+    assessmentRatingFields({ ...item, template_id: assessment.template_id, rating_method: item?.rating_method || assessmentRatingMethod(assessment) }, "section", assessment.template_id),
+    textareaField("section_summary", "Summary", item?.section_summary, false)
+  ]});
+}
+
+function openAssessmentFindingModal(id = null, assessmentId = "") {
+  const item = id ? state.assessmentFindings.find((record) => record.id === id) : {};
+  const assessment = state.assessments.find((record) => record.id === (item?.assessment_id || assessmentId)) || {};
+  openModal({ title: id ? "Edit Assessment Finding" : "Add Assessment Finding", mode: "assessment_findings", editingId: id, fields: [
+    selectField("assessment_id", "Assessment", assessmentOptions(), item?.assessment_id || assessmentId, true),
+    selectField("section_id", "Section", assessmentSectionOptions(item?.assessment_id || assessmentId), item?.section_id, false),
+    textareaField("question_text", "Question / Criterion", item?.question_text, false),
+    textareaField("expected_standard", "Expected Standard", item?.expected_standard, false),
+    textareaField("observation", "Observation", item?.observation, true),
+    textareaField("evidence_summary", "Evidence Summary", item?.evidence_summary, false),
+    assessmentRatingFields({ ...item, template_id: assessment.template_id, rating_method: item?.rating_method || assessmentRatingMethod(assessment) }, "finding", assessment.template_id),
+    selectField("compliance_result", "Compliance Result", optionSet(["compliant", "not_compliant", "partially_compliant", "not_applicable", "needs_follow_up"]), item?.compliance_result || "needs_follow_up", true),
+    selectField("severity", "Severity", optionSet(["low", "medium", "high", "critical"]), item?.severity || "medium", true),
+    selectField("finding_type", "Finding Type", optionSet(["strength", "observation", "minor_issue", "major_issue", "critical_issue", "opportunity_for_improvement"]), item?.finding_type || "observation", true),
+    textareaField("recommendation", "Recommendation", item?.recommendation, false),
+    checkboxField("requires_corrective_action", "Requires Corrective Action", Boolean(item?.requires_corrective_action)),
+    selectField("responsible_person_id", "Responsible Person", peopleOptions(), item?.responsible_person_id, false),
+    inputField("target_completion_date", "Target Completion Date", "date", item?.target_completion_date, false),
+    selectField("finding_status", "Finding Status", optionSet(["open", "in_progress", "corrected", "verified", "closed", "waived"]), item?.finding_status || "open", true)
+  ]});
+}
+
+function openAssessmentRatingScaleModal(id = null, templateId = "") {
+  const item = id ? state.assessmentRatingScales.find((record) => record.id === id) : {};
+  openModal({ title: id ? "Edit Rating Scale" : "Add Rating Scale", mode: "assessment_rating_scales", editingId: id, fields: [
+    selectField("template_id", "Template", assessmentTemplateOptions(), item?.template_id || templateId, true),
+    inputField("rating_value", "Rating Value", "text", item?.rating_value, true),
+    inputField("rating_label", "Rating Label", "text", item?.rating_label, true),
+    textareaField("rating_description", "Description", item?.rating_description, false),
+    inputField("score_value", "Score Value", "number", item?.score_value, false, { step: "0.01" }),
+    inputField("min_score", "Min Score", "number", item?.min_score, false, { step: "0.01" }),
+    inputField("max_score", "Max Score", "number", item?.max_score, false, { step: "0.01" }),
+    inputField("passing_threshold", "Passing Threshold", "number", item?.passing_threshold, false, { step: "0.01" }),
+    inputField("icon", "Icon / Symbol", "text", item?.icon, false),
+    inputField("color", "Color", "text", item?.color, false),
+    inputField("sort_order", "Sort Order", "number", item?.sort_order ?? 0, true),
+    checkboxField("is_passing", "Passing Rating", Boolean(item?.is_passing)),
+    checkboxField("is_active", "Active", item?.is_active !== false)
+  ]});
+}
+
+function renderAssessmentFindings() {
+  if (!elements.assessmentFindingsTable) return;
+  const records = canViewAssessments() ? state.assessmentFindings : [];
+  elements.assessmentFindingsTable.innerHTML = renderRows(records, (item) => `
+    <tr>
+      <td><strong>${escapeHtml(assessmentTitle(item.assessment_id))}</strong><span class="muted-action">${escapeHtml(assessmentSectionTitle(item.section_id) || "General")}</span></td>
+      <td>${escapeHtml(item.observation || item.question_text || "Observation")}<span class="muted-action">${assessmentRatingDisplay(item, "finding")}</span></td>
+      <td><span class="status-pill ${["high", "critical"].includes(item.severity) ? "danger" : item.severity === "medium" ? "warning" : ""}">${formattedRoleLabel(item.severity || "medium")}</span></td>
+      <td>${formattedRoleLabel(item.compliance_result || "needs_follow_up")}</td>
+      <td>${peopleName(item.responsible_person_id)}</td>
+      <td>${formatDate(item.target_completion_date)}</td>
+      <td class="actions-cell"><div class="table-actions">${canManageAssessments() ? `<button type="button" onclick="openAssessmentFindingModal('${escapeAttribute(item.id)}')">Edit</button><button type="button" onclick="openAssessmentCorrectiveActionModal('', '${escapeAttribute(item.id)}')">Action</button>` : ""}</div></td>
+    </tr>
+  `, 7, "No assessment findings found.");
+}
+
+function printAssessmentReport(assessmentId) {
+  const assessment = state.assessments.find((item) => item.id === assessmentId);
+  if (!assessment) return showToast("Assessment record was not found.", "error");
+  const findings = state.assessmentFindings.filter((item) => item.assessment_id === assessment.id);
+  const actions = state.assessmentCorrectiveActions.filter((item) => item.assessment_id === assessment.id);
+  const sections = state.assessmentSections.filter((item) => item.assessment_id === assessment.id);
+  const logo = assessment.evaluator_logo ? `<img class="assessment-evaluator-logo" src="${escapeAttribute(assessment.evaluator_logo)}" alt="Evaluator logo">` : "";
+  const signature = assessment.evaluator_signature ? `<img class="assessment-signature" src="${escapeAttribute(assessment.evaluator_signature)}" alt="Evaluator signature">` : "";
+  const sectionRows = sections.map((item) => [item.section_title, assessmentRatingDisplay({ ...item, assessment_id: assessment.id, template_id: assessment.template_id }, "section"), item.section_summary || ""]);
+  const findingRows = findings.map((item) => [assessmentSectionTitle(item.section_id) || "General", item.observation || item.question_text || "Observation", assessmentRatingDisplay({ ...item, assessment_id: assessment.id, template_id: assessment.template_id }, "finding"), formattedRoleLabel(item.compliance_result), formattedRoleLabel(item.severity), item.recommendation || ""]);
+  const actionRows = actions.map((item) => [item.action_title || "Action", peopleNameRaw(item.assigned_to), formatDate(item.due_date), formattedRoleLabel(item.action_status)]);
+  elements.printArea.innerHTML = `<div class="sop-summary-print assessment-print"><section class="sop-summary-document"><p class="print-pdf-hint">Use your browser print dialog and choose Save as PDF.</p><header class="assessment-csa-header">${logo}<div><p class="eyebrow">Assessment Conducted By</p><h1>${escapeHtml(assessment.evaluator_organization || "Assessment Team")}</h1><p>${escapeHtml([assessment.evaluator_representative, assessment.evaluator_position].filter(Boolean).join(" - ") || "Evaluator")}</p><p>${escapeHtml([assessment.evaluator_email, assessment.evaluator_contact_number].filter(Boolean).join(" | "))}</p></div></header><h1>${escapeHtml(assessment.assessment_title || "Assessment Report")}</h1><table class="document-control-table"><tbody><tr><th>Reference</th><td>${escapeHtml(assessment.assessment_reference_no || "Not assigned")}</td><th>Status</th><td>${formattedRoleLabel(assessment.assessment_status || "draft")}</td></tr><tr><th>Type</th><td>${escapeHtml(assessmentTypeName(assessment.assessment_type_id) || "Custom")}</td><th>Date</th><td>${formatDate(assessment.assessment_date)}</td></tr><tr><th>Client / Scope</th><td>${escapeHtml(assessmentScopeLabel(assessment))}</td><th>Rating</th><td>${escapeHtml(assessmentRatingDisplay(assessment))}</td></tr><tr><th>Location</th><td>${escapeHtml(assessment.assessed_location || assessment.assessed_address || "Not recorded")}</td><th>Method</th><td>${formattedRoleLabel(assessmentRatingMethod(assessment))}</td></tr></tbody></table><section class="monitoring-report-section"><h2>Purpose and Scope</h2><p>${escapeHtml(assessment.purpose || "No purpose recorded.")}</p><p>${escapeHtml(assessment.scope || "No scope recorded.")}</p></section><section class="monitoring-report-section"><h2>Reference Guidelines</h2><p>${escapeHtml(assessment.reference_guidelines || "No reference guidelines recorded.")}</p></section><section class="monitoring-report-section"><h2>Section Summary</h2>${assessmentPrintTable(["Section", "Rating", "Summary"], sectionRows, "No sections recorded.")}</section><section class="monitoring-report-section"><h2>Findings</h2>${assessmentPrintTable(["Section", "Observation", "Rating", "Result", "Severity", "Recommendation"], findingRows, "No findings recorded.")}</section><section class="monitoring-report-section"><h2>Corrective Actions</h2>${assessmentPrintTable(["Action", "Assigned To", "Due", "Status"], actionRows, "No corrective actions recorded.")}</section><section class="monitoring-report-section"><h2>Summary</h2><p>${escapeHtml(assessment.executive_summary || assessment.findings_summary || assessment.general_findings || "No summary recorded.")}</p><p>${escapeHtml(assessment.confidentiality_note || "Assessment findings are intended for review, accountability, and continuous improvement.")}</p></section><table class="signature-table"><tbody><tr><td>Evaluator<br><strong>${escapeHtml(assessment.evaluator_representative || "")}</strong>${signature}</td><td>Reviewed By<br><strong>${peopleNameRaw(assessment.reviewed_by)}</strong></td><td>Approved By<br><strong>${peopleNameRaw(assessment.approved_by)}</strong></td></tr></tbody></table></section></div>`;
+  window.setTimeout(() => window.print(), 150);
+}
+
+function exportAssessmentsCsv() {
+  downloadCsv("assessment-audit-records.csv", state.assessments.map((item) => ({
+    Reference: item.assessment_reference_no,
+    Title: item.assessment_title,
+    Type: assessmentTypeName(item.assessment_type_id),
+    Scope: assessmentScopeLabel(item),
+    Date: item.assessment_date,
+    Status: formattedRoleLabel(item.assessment_status),
+    Method: formattedRoleLabel(assessmentRatingMethod(item)),
+    Rating: assessmentRatingDisplay(item),
+    Evaluator: item.evaluator_organization
+  })));
+}
+
+window.openAssessmentModal = openAssessmentModal;
+window.openAssessmentTemplateModal = openAssessmentTemplateModal;
+window.openAssessmentSectionModal = openAssessmentSectionModal;
+window.openAssessmentFindingModal = openAssessmentFindingModal;
+window.openAssessmentRatingScaleModal = openAssessmentRatingScaleModal;
+window.printAssessmentReport = printAssessmentReport;
+window.exportAssessmentsCsv = exportAssessmentsCsv;

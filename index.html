@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260531-sop-report-pagination">
+  <link rel="stylesheet" href="styles.css?v=20260604-assessment-print-pdf">
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -87,6 +87,7 @@
         <button class="nav-link" type="button" data-view="peopleProfilesView"><span class="nav-icon" data-icon="people">H</span><span>People / HR</span></button>
         <button class="nav-link" type="button" data-view="equipmentView"><span class="nav-icon" data-icon="equipment">E</span><span>Equipment</span></button>
         <button class="nav-link" type="button" data-view="sopView"><span class="nav-icon" data-icon="sop"></span><span>SOP Library</span></button>
+        <button class="nav-link" type="button" data-view="assessmentsView"><span class="nav-icon" data-icon="assessment"></span><span>Assessments</span></button>
         <button class="nav-link" type="button" data-view="notificationsView"><span class="nav-icon" data-icon="bell">N</span><span>Notifications</span></button>
         <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
         <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
@@ -127,6 +128,7 @@
         <button class="nav-link" type="button" data-view="peopleProfilesView"><span class="nav-icon" data-icon="people">H</span><span>People / HR</span></button>
         <button class="nav-link" type="button" data-view="equipmentView"><span class="nav-icon" data-icon="equipment">E</span><span>Equipment</span></button>
         <button class="nav-link" type="button" data-view="sopView"><span class="nav-icon" data-icon="sop"></span><span>SOP</span></button>
+        <button class="nav-link" type="button" data-view="assessmentsView"><span class="nav-icon" data-icon="assessment"></span><span>Assessments</span></button>
         <button class="nav-link" type="button" data-view="notificationsView"><span class="nav-icon" data-icon="bell">N</span><span>Notifications</span></button>
         <button class="nav-link" type="button" data-view="settingsView"><span class="nav-icon" data-icon="settings">S</span><span>Company Settings</span></button>
         <button class="nav-link" type="button" data-view="taskBoardView"><span class="nav-icon" data-icon="tasks">T</span><span>Workspace Tasks</span></button>
@@ -213,7 +215,19 @@
             </div>
             <div id="workspaceTasksDashboard" class="workspace-task-dashboard"></div>
           </article>
-          <article class="panel">
+          <article class="panel assessment-dashboard-section">
+            <div class="panel-heading">
+              <h4>Assessments</h4>
+              <button class="secondary-btn" type="button" data-view="assessmentsView">Open Assessments</button>
+            </div>
+            <div id="assessmentDashboardCards" class="summary-grid mini"></div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead><tr><th>Assessment</th><th>Area</th><th>Status</th><th>Rating</th><th>Date</th></tr></thead>
+                <tbody id="recentAssessmentsDashboardTable"></tbody>
+              </table>
+            </div>
+          </article>          <article class="panel">
             <div class="panel-heading">
               <h4>SOP</h4>
               <button class="secondary-btn" type="button" data-view="sopView">Open SOP Library</button>
@@ -609,6 +623,51 @@
         </article>
       </section>
 
+      <section id="assessmentsView" class="view" aria-labelledby="assessmentsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Assessment & Audit</p>
+            <h3 id="assessmentsTitle">Third-Party / Internal Assessments</h3>
+            <p class="section-subtitle">Evaluate any business process, department, branch, workspace, supplier, SOP, or operation using configurable criteria.</p>
+          </div>
+          <div class="heading-actions">
+            <button class="secondary-btn" type="button" onclick="exportAssessmentsCsv()">Export CSV</button>
+            <button id="addAssessmentTemplateBtn" class="secondary-btn" type="button">Create Template</button>
+            <button id="addAssessmentFindingBtn" class="secondary-btn" type="button">Add Finding</button>
+            <button id="addAssessmentActionBtn" class="secondary-btn" type="button">Add Action</button>
+            <button id="addAssessmentBtn" class="primary-btn" type="button">Create Assessment</button>
+          </div>
+        </div>
+        <article class="panel assessment-records-section">
+          <div class="panel-heading"><h4>Assessment Records</h4></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Assessment</th><th>Type</th><th>Scope</th><th>Date</th><th>Status</th><th>Rating</th><th class="actions-cell">Actions</th></tr></thead>
+              <tbody id="assessmentTable"></tbody>
+            </table>
+          </div>
+        </article>
+        <div class="content-grid assessment-workflow-grid">
+          <article class="panel">
+            <div class="panel-heading"><h4>Templates</h4></div>
+            <div class="table-wrap compact-table"><table><thead><tr><th>Template</th><th>Type</th><th>Scoring</th><th>Sections</th><th>Ratings</th><th>Status</th><th class="actions-cell">Actions</th></tr></thead><tbody id="assessmentTemplatesTable"></tbody></table></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><h4>Findings</h4></div>
+            <div class="table-wrap compact-table"><table><thead><tr><th>Assessment</th><th>Observation</th><th>Severity</th><th>Result</th><th>Responsible</th><th>Target</th><th class="actions-cell">Actions</th></tr></thead><tbody id="assessmentFindingsTable"></tbody></table></div>
+          </article>
+        </div>
+        <div class="content-grid assessment-workflow-grid">
+          <article class="panel">
+            <div class="panel-heading"><h4>Corrective Actions</h4></div>
+            <div class="table-wrap compact-table"><table><thead><tr><th>Action</th><th>Detail</th><th>Assigned To</th><th>Due</th><th>Status</th><th class="actions-cell">Actions</th></tr></thead><tbody id="assessmentActionsTable"></tbody></table></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><h4>Reports</h4></div>
+            <div class="table-wrap compact-table"><table><thead><tr><th>Report</th><th>Assessment</th><th>Status</th><th>Generated</th><th class="actions-cell">Actions</th></tr></thead><tbody id="assessmentReportsTable"></tbody></table></div>
+          </article>
+        </div>
+      </section>
       <section id="notificationsView" class="view" aria-labelledby="notificationsTitle">
         <div class="section-heading">
           <div>
@@ -1049,6 +1108,12 @@
   <section id="printArea" class="print-area" aria-hidden="true"></section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=20260531-sop-report-pagination"></script>
+  <script src="app.js?v=20260604-assessment-print-pdf"></script>
 </body>
 </html>
+
+
+
+
+
+
